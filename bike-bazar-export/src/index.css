@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/*
+  Bike Bazar design tokens.
+  These come straight from the design handoff doc.
+  Because we use Tailwind v4, we declare tokens here in CSS
+  using @theme, and Tailwind turns each one into utility classes
+  automatically. Example: --color-ink below gives us bg-ink,
+  text-ink, border-ink everywhere in our components.
+*/
+@theme {
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Plus Jakarta Sans", sans-serif;
+  --color-ink: #0E1116;
+  --color-ink-2: #1A1D22;
+  --color-pagebg: #F5F7FB;
+  --color-sunken: #EFF2F8;
+  --color-bordercol: #E1E5EE;
+  --color-bordersoft: #ECEFF6;
+  --color-borderstrong: #CDD3E0;
+  --color-textbody: #2C3036;
+  --color-textmuted: #5C6066;
+  --color-textfaint: #6B6F76;
+
+  --color-accent: #2B5BE3;
+  --color-accenthover: #1E43AB;
+  --color-accentsoftbg: #F2F5FE;
+  --color-accentsoftborder: #D6DFFA;
+  --color-accentsofttext: #1B3AA0;
+
+  --color-success: #12805C;
+  --color-successbg: #E3F3EC;
+  --color-warning: #8A5A12;
+  --color-warningbg: #FBF0DA;
+  --color-danger: #A23A2C;
+  --color-dangerbg: #FBE6E2;
+  --color-featured: #8A3B12;
+  --color-featuredbg: #FDEBD8;
+  --color-neutralbadge: #6B6F76;
+  --color-neutralbadgebg: #EFEFEA;
+
+  --radius-badge: 6px;
+  --radius-ctl: 9px;
+  --radius-btn: 10px;
+  --radius-cardsm: 12px;
+  --radius-card: 14px;
+  --radius-band: 16px;
+}
+
+body {
+  background: var(--color-pagebg);
+  font-family: var(--font-body);
+  color: var(--color-ink);
+}

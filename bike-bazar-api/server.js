@@ -5,6 +5,8 @@ const cors = require('cors')
 const mongoose = require('mongoose')
 
 const vehiclesRouter = require('./routes/vehicles')
+const authRouter = require('./routes/auth')
+const favoritesRouter = require('./routes/favorites')
 
 const app = express()
 const PORT = process.env.PORT || 4000
@@ -17,6 +19,8 @@ app.get('/api/health', (req, res) => {
 })
 
 app.use('/api/vehicles', vehiclesRouter)
+app.use('/api/auth', authRouter)
+app.use('/api/favorites', favoritesRouter)
 
 mongoose
   .connect(process.env.MONGODB_URI)

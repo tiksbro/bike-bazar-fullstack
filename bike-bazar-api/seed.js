@@ -1,7 +1,12 @@
 require('dotenv').config()
 
 const mongoose = require('mongoose')
+const bcrypt = require('bcryptjs')
 const Vehicle = require('./models/Vehicle')
+const User = require('./models/User')
+
+const SALT_ROUNDS = 10
+const SEED_USER_EMAIL = 'seed@bikebazar.com'
 
 const vehicles = [
   { slug: 'yamaha-r15-v3-2022', brand: 'Yamaha', model: 'R15 V3', type: 'motorcycle', year: 2022, mileageKm: 18000, engineCc: 155, price: 320000, negotiable: true, location: 'Kathmandu', featured: true, verifiedSeller: true, priceInsight: 'good', artColor: 'orange', fuelType: 'Petrol' },
@@ -31,8 +36,17 @@ async function seed() {
     await mongoose.connect(process.env.MONGODB_URI)
     console.log('MongoDB connected successfully')
 
+    let seedUser = await User.findOne({ email: SEED_USER_EMAIL })
+    if (!seedUser) {
+      const hashedPassword = await bcrypt.hash('seed-account-not-for-login', SALT_ROUNDS)
+      seedUser = new User({ name: 'Bike Bazar Demo', email: SEED_USER_EMAIL, password: hashedPassword })
+      await seedUser.save()
+    }
+
+    const vehiclesWithOwner = vehicles.map((vehicle) => ({ ...vehicle, owner: seedUser._id }))
+
     await Vehicle.deleteMany({})
-    const inserted = await Vehicle.insertMany(vehicles)
+    const inserted = await Vehicle.insertMany(vehiclesWithOwner)
 
     console.log(`Inserted ${inserted.length} vehicles`)
     process.exit(0)

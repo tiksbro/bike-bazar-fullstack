@@ -17,6 +17,8 @@ const vehicleSchema = new mongoose.Schema({
   artColor: { type: String, default: 'blue' },
   fuelType: { type: String, enum: ['Petrol', 'Electric'], default: 'Petrol' },
   description: { type: String },
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  status: { type: String, enum: ['active', 'paused', 'sold'], default: 'active' },
 }, { toJSON: { virtuals: true }, toObject: { virtuals: true } })
 
 vehicleSchema.virtual('id').get(function () {

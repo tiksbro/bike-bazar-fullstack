@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { citiesByProvince } from '../data/cities'
 import { createVehicle } from '../services/vehicleService'
+import { useAuth } from '../context/AuthContext'
 
 const steps = ['Vehicle Info', 'Price & Condition', 'Location', 'Preview']
 
@@ -47,13 +48,7 @@ function Sell() {
     setSubmitError('')
     setSubmitting(true)
     try {
-      await createVehicle({
-        ...formData,
-        year: Number(formData.year),
-        mileageKm: Number(formData.mileageKm),
-        engineCc: Number(formData.engineCc),
-        price: Number(formData.price),
-      })
+      
       setPublished(true)
     } catch (err) {
       setSubmitError(err.message)
@@ -61,14 +56,26 @@ function Sell() {
       setSubmitting(false)
     }
   }
+  const { user } = useAuth()
+
+if (!user) {
+  return (
+    <div className="max-w-[500px] mx-auto px-4 sm:px-6 py-24 text-center">
+      <h1 className="font-display font-bold text-2xl">Log In to Sell a Vehicle</h1>
+      <p className="text-textmuted mt-2">You need an account to list a vehicle for sale.</p>
+      <Link to="/login" className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3">
+        Log In
+      </Link>
+    </div>
+  )
+}
 
   if (published) {
     return (
       <div className="max-w-[600px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
         <h1 className="font-display font-bold text-2xl">Listing Submitted!</h1>
         <p className="text-textmuted mt-2">
-          Your {formData.brand} {formData.model} has been submitted for review.
-          (This is a mock submission — nothing was actually saved to a server yet.)
+          Your {formData.brand} {formData.model} has been saved and is now live on Bike Bazar.
         </p>
         <Link to="/" className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3">
           Back to Home

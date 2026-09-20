@@ -34,10 +34,13 @@ export async function listVehicles(filters = {}) {
   return res.json()
 }
 
-export async function createVehicle(vehicleData) {
+export async function createVehicle(vehicleData,token) {
   const res = await fetch(`${API_URL}/vehicles`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
     body: JSON.stringify(vehicleData),
   })
   const data = await res.json()
@@ -65,9 +68,7 @@ export async function getSimilar(vehicle, limit = 3) {
     .filter((v) => v.id !== vehicle.id && (v.brand === vehicle.brand || v.type === vehicle.type))
     .slice(0, limit)
 }
-// This one stays a plain, non-async function on purpose — it only does
-// math on a vehicle object you already have in hand, it never fetches
-// anything itself.
+
 export function getHealthScore(vehicle) {
   const age = new Date().getFullYear() - vehicle.year
   const kmFactor = Math.max(0, 100 - vehicle.mileageKm / 500)

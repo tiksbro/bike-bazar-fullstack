@@ -1,5 +1,6 @@
 const express = require('express')
 const Vehicle = require('../models/Vehicle')
+const requireAuth = require('../middleware/requireAuth')
 
 const router = express.Router()
 
@@ -60,6 +61,16 @@ router.get('/', async (req, res) => {
   }
 })
 
+// GET /api/vehicles/mine/list
+router.get('/mine/list', requireAuth, async (req, res) => {
+  try {
+    const vehicles = await Vehicle.find({ owner: req.userId }).sort({ _id: -1 })
+    res.json(vehicles)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch your vehicles', details: err.message })
+  }
+})
+
 // GET /api/vehicles/:slug
 router.get('/:slug', async (req, res) => {
   try {
@@ -74,7 +85,7 @@ router.get('/:slug', async (req, res) => {
 })
 
 // POST /api/vehicles
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   try {
     const { brand, model, year, type, mileageKm, engineCc, price, negotiable, location, fuelType, description } = req.body
 
@@ -105,12 +116,56 @@ router.post('/', async (req, res) => {
       verifiedSeller: false,
       priceInsight: 'fair',
       artColor,
+      owner: req.userId,
     })
 
     await vehicle.save()
     res.status(201).json(vehicle)
   } catch (err) {
     res.status(500).json({ error: 'Failed to create vehicle', details: err.message })
+  }
+})
+
+// PATCH /api/vehicles/:id
+router.patch('/:id', requireAuth, async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findById(req.params.id)
+    if (!vehicle) {
+      return res.status(404).json({ error: `No vehicle found with id "${req.params.id}"` })
+    }
+    if (vehicle.owner.toString() !== req.userId) {
+      return res.status(403).json({ error: "You don't own this listing" })
+    }
+
+    const EDITABLE_FIELDS = ['price', 'negotiable', 'mileageKm', 'description', 'status']
+    EDITABLE_FIELDS.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        vehicle[field] = req.body[field]
+      }
+    })
+
+    await vehicle.save()
+    res.status(200).json(vehicle)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update vehicle', details: err.message })
+  }
+})
+
+// DELETE /api/vehicles/:id
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findById(req.params.id)
+    if (!vehicle) {
+      return res.status(404).json({ error: `No vehicle found with id "${req.params.id}"` })
+    }
+    if (vehicle.owner.toString() !== req.userId) {
+      return res.status(403).json({ error: "You don't own this listing" })
+    }
+
+    await vehicle.deleteOne()
+    res.status(200).json({ message: 'Vehicle deleted' })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete vehicle', details: err.message })
   }
 })
 

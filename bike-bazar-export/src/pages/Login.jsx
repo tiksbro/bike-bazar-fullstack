@@ -24,10 +24,11 @@ const [city, setCity] = useState('')
     try {
       if (mode === 'login') {
         await login(email, password)
+        navigate('/profile')
       } else {
         await register(name, email, password, isDealer ? { role: 'dealer', businessName, city } : {})
+        navigate(isDealer ? '/dashboard' : '/profile')
       }
-      navigate('/profile')
     } catch (err) {
       
       setError(err.message)

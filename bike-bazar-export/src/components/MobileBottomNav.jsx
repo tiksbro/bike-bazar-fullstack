@@ -33,11 +33,14 @@ function MobileBottomNav() {
         <span className="text-[11px] font-medium text-textmuted mt-1">Sell</span>
       </Link>
 
-      <NavLink to="/favorites" className={tabClass}>
+      <NavLink to="/dashboard" className={tabClass}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-          <path d="M20.8 4.6c-1.8-1.5-4.5-1.3-6.1.4L12 7.7l-2.7-2.7c-1.6-1.7-4.3-1.9-6.1-.4-2 1.7-2.1 4.8-.3 6.6l8.4 8.6a1 1 0 0 0 1.4 0l8.4-8.6c1.8-1.8 1.7-4.9-.3-6.6z" />
+          <rect x="3" y="3" width="7" height="9" rx="1.5" />
+          <rect x="14" y="3" width="7" height="5" rx="1.5" />
+          <rect x="14" y="12" width="7" height="9" rx="1.5" />
+          <rect x="3" y="16" width="7" height="5" rx="1.5" />
         </svg>
-        Favorites
+        Dashboard
       </NavLink>
 
       <NavLink to={user ? '/profile' : '/login'} className={tabClass}>

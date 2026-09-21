@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import VehicleCard, { VehicleArt } from '../components/VehicleCard'
 import { getVehicleBySlug, getSimilar, getHealthScore } from '../services/vehicleService'
+import { getUserContact } from '../services/userService'
 import HealthScoreGauge from '../components/HealthScoreGauge'
 import HealthScoreBreakdown from '../components/HealthScoreBreakdown'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+
 
 const artBackgrounds = {
   orange: 'linear-gradient(160deg,#FDECE0,#F6C79B)',
@@ -23,7 +25,9 @@ function VehicleDetail() {
   const { slug } = useParams()
   const [vehicle, setVehicle] = useState(null)
   const [similar, setSimilar] = useState([])
+  const [sellerContact, setSellerContact] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [offerModalOpen, setOfferModalOpen] = useState(false)
 
   // [slug] in the dependency array (not []) means: run this again
   // whenever slug changes — e.g. clicking a "Similar Vehicles" card
@@ -34,12 +38,17 @@ function VehicleDetail() {
       setLoading(true)
       const data = await getVehicleBySlug(slug)
       setVehicle(data)
+      setSellerContact(null)
 
-      // Only fetch similar vehicles if we actually found one —
-      // getSimilar needs a real vehicle to compare against.
+      // Only fetch similar vehicles/seller contact if we actually found
+      // one — both need a real vehicle to look up.
       if (data) {
-        const similarData = await getSimilar(data)
+        const [similarData, contactData] = await Promise.all([
+          getSimilar(data),
+          getUserContact(data.owner),
+        ])
         setSimilar(similarData)
+        setSellerContact(contactData)
       }
       setLoading(false)
     }
@@ -114,12 +123,26 @@ function VehicleDetail() {
           </div>
 
           <div className="flex gap-3 mt-6">
-            <button className="bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-6 py-3">
+            <button
+              onClick={() => setOfferModalOpen(true)}
+              className="bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-6 py-3"
+            >
               Make an Offer
             </button>
-            <button className="border border-bordercol font-semibold text-sm rounded-btn px-6 py-3">
-              Contact Seller
-            </button>
+            {sellerContact ? (
+              <a
+                href={`mailto:${sellerContact.email}?subject=${encodeURIComponent(
+                  `Interested in your ${vehicle.brand} ${vehicle.model} listing on Bike Bazar`
+                )}`}
+                className="border border-bordercol font-semibold text-sm rounded-btn px-6 py-3"
+              >
+                Contact Seller
+              </a>
+            ) : (
+              <button disabled className="border border-bordercol font-semibold text-sm rounded-btn px-6 py-3 opacity-40 cursor-not-allowed">
+                Contact Seller
+              </button>
+            )}
           </div>
 
           <div className="mt-8 border border-bordercol rounded-card p-4">
@@ -151,6 +174,8 @@ function VehicleDetail() {
         </p>
       </div>
 
+
+
       <div className="mt-10">
         <h2 className="font-display font-bold text-xl">Specifications</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
@@ -175,6 +200,33 @@ function VehicleDetail() {
           </div>
         </div>
       )}
+
+      {offerModalOpen && <OfferModal onClose={() => setOfferModalOpen(false)} />}
+    </div>
+  )
+}
+
+function OfferModal({ onClose }) {
+  return (
+    <div
+      className="fixed inset-0 bg-ink/50 flex items-center justify-center z-50 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-card border border-bordercol p-6 max-w-sm w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="font-display font-bold text-lg">Make an Offer</h3>
+        <p className="text-sm text-textmuted mt-2">
+          Offer requests aren't available yet — for now, contact the seller directly using the button above.
+        </p>
+        <button
+          onClick={onClose}
+          className="bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-2.5 mt-4"
+        >
+          Close
+        </button>
+      </div>
     </div>
   )
 }

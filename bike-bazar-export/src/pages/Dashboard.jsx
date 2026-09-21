@@ -108,7 +108,15 @@ function Dashboard() {
       </div>
 
       <div className="mt-10">
-        <h2 className="font-display font-bold text-xl">Your Listings</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-display font-bold text-xl">Your Listings</h2>
+          <Link
+            to="/sell"
+            className="text-sm font-semibold px-4 py-2 rounded-btn bg-accent hover:bg-accenthover transition text-white"
+          >
+            + Add Vehicle
+          </Link>
+        </div>
         {loading ? (
           <p className="text-textmuted text-sm mt-4">Loading your listings...</p>
         ) : listings.length === 0 ? (

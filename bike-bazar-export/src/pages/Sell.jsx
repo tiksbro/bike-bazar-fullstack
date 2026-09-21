@@ -44,11 +44,14 @@ function Sell() {
   function goBack() {
     if (step > 1) setStep(step - 1)
   }
+  const { user } = useAuth()
+
   async function handlePublish() {
     setSubmitError('')
     setSubmitting(true)
     try {
-      
+      const token = localStorage.getItem('bikebazar_token')
+      await createVehicle(formData, token)
       setPublished(true)
     } catch (err) {
       setSubmitError(err.message)
@@ -56,7 +59,6 @@ function Sell() {
       setSubmitting(false)
     }
   }
-  const { user } = useAuth()
 
 if (!user) {
   return (
@@ -77,9 +79,14 @@ if (!user) {
         <p className="text-textmuted mt-2">
           Your {formData.brand} {formData.model} has been saved and is now live on Bike Bazar.
         </p>
-        <Link to="/" className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3">
-          Back to Home
-        </Link>
+        <div className="flex gap-3 justify-center mt-6">
+          <Link to="/dashboard" className="inline-flex bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3">
+            View in Dashboard
+          </Link>
+          <Link to="/" className="inline-flex border border-bordercol font-semibold text-sm rounded-btn px-5 py-3">
+            Back to Home
+          </Link>
+        </div>
       </div>
     )
   }

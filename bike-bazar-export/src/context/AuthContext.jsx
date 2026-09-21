@@ -53,9 +53,14 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('bikebazar_token')
     setUser(null)
   }
+  function updateUser(updates) {
+  const newUser = { ...user, ...updates }
+  localStorage.setItem('bikebazar_user', JSON.stringify(newUser))
+  setUser(newUser)
+}
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

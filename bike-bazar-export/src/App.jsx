@@ -6,6 +6,8 @@ import MainLayout from './layouts/MainLayout'
 import Home from './pages/Home'
 import Browse from './pages/Browse'
 import VehicleDetail from './pages/VehicleDetail'
+import NewBikes from './pages/NewBikes'
+import NewBikeDetail from './pages/NewBikeDetail'
 import Favorites from './pages/Favorites'
 import Compare from './pages/Compare'
 import Sell from './pages/Sell'
@@ -32,6 +34,8 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/vehicles" element={<Browse />} />
                 <Route path="/vehicle/:slug" element={<VehicleDetail />} />
+                <Route path="/new-bikes" element={<NewBikes />} />
+                <Route path="/new-bikes/:slug" element={<NewBikeDetail />} />
                 <Route path="/favorites" element={<Favorites />} />
                 <Route path="/compare" element={<Compare />} />
                 <Route path="/sell" element={<Sell />} />

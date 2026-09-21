@@ -2,6 +2,7 @@ const express = require('express')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const User = require('../models/User')
+const requireAuth = require('../middleware/requireAuth')
 
 const router = express.Router()
 
@@ -15,13 +16,19 @@ function generateToken(user) {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body
+    const { name, email, password, role, businessName, city, brands } = req.body
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'name, email and password are required' })
     }
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' })
+    }
+
+    const normalizedRole = role === 'dealer' ? 'dealer' : 'buyer'
+
+    if (normalizedRole === 'dealer' && (!businessName || !city)) {
+      return res.status(400).json({ error: 'businessName and city are required for dealer accounts' })
     }
 
     const normalizedEmail = email.toLowerCase()
@@ -33,7 +40,15 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS)
 
-    const user = new User({ name, email: normalizedEmail, password: hashedPassword })
+    const user = new User({
+      name,
+      email: normalizedEmail,
+      password: hashedPassword,
+      role: normalizedRole,
+      businessName,
+      city,
+      brands,
+    })
     await user.save()
 
     const token = generateToken(user)
@@ -66,6 +81,27 @@ router.post('/login', async (req, res) => {
     res.status(200).json({ token, user })
   } catch (err) {
     res.status(500).json({ error: 'Failed to log in', details: err.message })
+  }
+})
+
+// PATCH /api/auth/upgrade
+router.patch('/upgrade', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId)
+
+    if (user.role !== 'dealer') {
+      return res.status(400).json({ error: 'Only dealer accounts can upgrade to Pro' })
+    }
+    if (user.subscriptionTier === 'pro') {
+      return res.status(400).json({ error: 'Already on the Pro plan' })
+    }
+
+    user.subscriptionTier = 'pro'
+    await user.save()
+
+    res.status(200).json(user)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to upgrade account', details: err.message })
   }
 })
 

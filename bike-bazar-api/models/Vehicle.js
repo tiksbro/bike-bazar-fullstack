@@ -12,6 +12,7 @@ const vehicleSchema = new mongoose.Schema({
   negotiable: { type: Boolean, default: true },
   location: { type: String, required: true },
   featured: { type: Boolean, default: false },
+  featuredUntil: { type: Date },
   verifiedSeller: { type: Boolean, default: true },
   priceInsight: { type: String, enum: ['good', 'fair', 'high'], default: 'fair' },
   artColor: { type: String, default: 'blue' },

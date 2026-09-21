@@ -1,11 +1,13 @@
 const express = require('express')
 const Vehicle = require('../models/Vehicle')
+const User = require('../models/User')
 const requireAuth = require('../middleware/requireAuth')
 
 const router = express.Router()
 
 const ART_COLORS = ['orange', 'blue', 'graphite', 'teal']
 const REQUIRED_FIELDS = ['brand', 'model', 'year', 'type', 'mileageKm', 'engineCc', 'price', 'location', 'fuelType']
+const FREE_DEALER_LISTING_LIMIT = 5
 
 function slugify(text) {
   return text
@@ -96,6 +98,16 @@ router.post('/', requireAuth, async (req, res) => {
       return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` })
     }
 
+    const user = await User.findById(req.userId)
+    if (user.role === 'dealer' && user.subscriptionTier === 'free') {
+      const activeCount = await Vehicle.countDocuments({ owner: req.userId, status: { $ne: 'sold' } })
+      if (activeCount >= FREE_DEALER_LISTING_LIMIT) {
+        return res.status(400).json({
+          error: `Free dealer accounts are limited to ${FREE_DEALER_LISTING_LIMIT} active listings. Upgrade to Pro for unlimited listings.`,
+        })
+      }
+    }
+
     const slug = await generateUniqueSlug(brand, model, year)
     const artColor = ART_COLORS[Math.floor(Math.random() * ART_COLORS.length)]
 
@@ -123,6 +135,34 @@ router.post('/', requireAuth, async (req, res) => {
     res.status(201).json(vehicle)
   } catch (err) {
     res.status(500).json({ error: 'Failed to create vehicle', details: err.message })
+  }
+})
+
+const BOOST_DAYS = [7, 14, 30]
+
+// PATCH /api/vehicles/:id/boost
+router.patch('/:id/boost', requireAuth, async (req, res) => {
+  try {
+    const vehicle = await Vehicle.findById(req.params.id)
+    if (!vehicle) {
+      return res.status(404).json({ error: `No vehicle found with id "${req.params.id}"` })
+    }
+    if (vehicle.owner.toString() !== req.userId) {
+      return res.status(403).json({ error: "You don't own this listing" })
+    }
+
+    const { days } = req.body
+    if (!BOOST_DAYS.includes(days)) {
+      return res.status(400).json({ error: `days must be one of: ${BOOST_DAYS.join(', ')}` })
+    }
+
+    vehicle.featured = true
+    vehicle.featuredUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+
+    await vehicle.save()
+    res.status(200).json(vehicle)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to boost vehicle', details: err.message })
   }
 })
 

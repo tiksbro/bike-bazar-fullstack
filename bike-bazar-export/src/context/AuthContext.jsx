@@ -32,12 +32,13 @@ export function AuthProvider({ children }) {
     setUser(data.user)
   }
 
-  async function register(name, email, password) {
-    const res = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
-    })
+ async function register(name, email, password, dealerInfo = {}) {
+  const res = await fetch(`${API_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password, ...dealerInfo }),
+  })
+
     const data = await res.json()
     if (!res.ok) {
       throw new Error(data.error || 'Registration failed')

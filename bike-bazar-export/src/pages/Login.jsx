@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 function Login() {
-  const [mode, setMode] = useState('login') // 'login' or 'register'
+  const [mode, setMode] = useState('login') 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [isDealer, setIsDealer] = useState(false)
+const [businessName, setBusinessName] = useState('')
+const [city, setCity] = useState('')
 
   const { login, register } = useAuth()
   const navigate = useNavigate()
@@ -22,14 +25,11 @@ function Login() {
       if (mode === 'login') {
         await login(email, password)
       } else {
-        await register(name, email, password)
+        await register(name, email, password, isDealer ? { role: 'dealer', businessName, city } : {})
       }
       navigate('/profile')
     } catch (err) {
-      // err.message is exactly the string AuthContext's throw new
-      // Error(...) set it to — e.g. "Invalid email or password" or
-      // "An account with this email already exists" — straight from
-      // our backend's actual response.
+      
       setError(err.message)
     } finally {
       setSubmitting(false)
@@ -76,6 +76,37 @@ function Login() {
             />
           </div>
         )}
+     
+{mode === 'register' && (
+  <label className="flex items-center gap-2 text-sm">
+    <input type="checkbox" checked={isDealer} onChange={(e) => setIsDealer(e.target.checked)} />
+    I'm registering as a dealer / business seller
+  </label>
+)}
+
+{mode === 'register' && isDealer && (
+  <>
+    <div>
+      <label className="text-sm font-semibold block mb-1.5">Business Name</label>
+      <input
+        value={businessName}
+        onChange={(e) => setBusinessName(e.target.value)}
+        className="w-full border border-bordercol rounded-ctl px-3 py-2 text-sm"
+        placeholder="e.g. Rahul Motors"
+      />
+    </div>
+    <div>
+      <label className="text-sm font-semibold block mb-1.5">City</label>
+      <input
+        value={city}
+        onChange={(e) => setCity(e.target.value)}
+        className="w-full border border-bordercol rounded-ctl px-3 py-2 text-sm"
+        placeholder="e.g. Kathmandu"
+      />
+    </div>
+  </>
+)}
+        
 
         <div>
           <label className="text-sm font-semibold block mb-1.5">Email</label>

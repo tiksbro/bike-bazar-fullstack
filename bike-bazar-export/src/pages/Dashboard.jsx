@@ -55,6 +55,21 @@ function Dashboard() {
     }
   }
 
+  async function boostListing(vehicleId, days) {
+    const res = await fetch(`${API_URL}/vehicles/${vehicleId}/boost`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify({ days }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setListings(listings.map((l) => (l.id === vehicleId ? updated : l)))
+    }
+  }
+
   async function deleteListing(vehicleId) {
     const res = await fetch(`${API_URL}/vehicles/${vehicleId}`, {
       method: 'DELETE',
@@ -145,6 +160,19 @@ function Dashboard() {
                       >
                         Mark Sold
                       </button>
+                    )}
+                    {status !== 'sold' && !vehicle.featured && (
+                      <button
+                        onClick={() => boostListing(vehicle.id, 7)}
+                        className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-accent text-white"
+                      >
+                        Boost (7 days)
+                      </button>
+                    )}
+                    {vehicle.featured && (
+                      <span className="text-[11px] font-bold px-2 py-1 rounded-badge text-featured bg-featuredbg">
+                        ⭐ Featured
+                      </span>
                     )}
                     <button
                       onClick={() => deleteListing(vehicle.id)}

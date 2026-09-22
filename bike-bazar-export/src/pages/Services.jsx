@@ -4,17 +4,26 @@ import { listVehicles } from '../services/vehicleService'
 function Services() {
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
   const [selectedVehicleId, setSelectedVehicleId] = useState('')
   const [requested, setRequested] = useState(false)
 
   useEffect(() => {
     async function loadVehicles() {
-      const data = await listVehicles()
-      setVehicles(data)
-      setLoading(false)
+      setLoading(true)
+      setError('')
+      try {
+        const data = await listVehicles()
+        setVehicles(data)
+      } catch {
+        setError("Couldn't load vehicles. Check your connection and try again.")
+      } finally {
+        setLoading(false)
+      }
     }
     loadVehicles()
-  }, [])
+  }, [retryCount])
 
   function handleRequestInspection(e) {
     e.preventDefault()
@@ -39,6 +48,18 @@ function Services() {
           <p className="text-success font-semibold text-sm mt-4">
             ✓ Inspection requested! We'll be in touch once inspection partners are live in your area.
           </p>
+        ) : error ? (
+          <div className="mt-4">
+            <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
+            <div>
+              <button
+                onClick={() => setRetryCount((c) => c + 1)}
+                className="mt-3 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-2"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
         ) : (
           <form onSubmit={handleRequestInspection} className="flex flex-col sm:flex-row gap-3 mt-4">
             <select

@@ -7,6 +7,8 @@ function FeaturedBikes() {
   // we don't have them yet), and whether we're still waiting on them.
   const [featured, setFeatured] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   // useEffect runs code that reaches OUTSIDE this component — here,
   // to the network. The empty array [] at the end is the important
@@ -14,15 +16,38 @@ function FeaturedBikes() {
   // appears on screen" — NOT on every re-render.
   useEffect(() => {
     async function loadFeatured() {
-      const data = await getFeatured()
-      setFeatured(data)
-      setLoading(false)
+      setLoading(true)
+      setError('')
+      try {
+        const data = await getFeatured()
+        setFeatured(data)
+      } catch {
+        setError("Couldn't load featured bikes. Check your connection and try again.")
+      } finally {
+        setLoading(false)
+      }
     }
     loadFeatured()
-  }, [])
+  }, [retryCount])
 
   if (loading) {
     return <p className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 text-textmuted">Loading featured bikes...</p>
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
+        <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
+        <div>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="inline-flex mt-3 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (

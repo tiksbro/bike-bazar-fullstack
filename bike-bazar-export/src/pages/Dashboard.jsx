@@ -16,6 +16,8 @@ function Dashboard() {
   const { user } = useAuth()
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   function getToken() {
     return localStorage.getItem('bikebazar_token')
@@ -28,17 +30,23 @@ function Dashboard() {
         return
       }
       setLoading(true)
-      const res = await fetch(`${API_URL}/vehicles/mine/list`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setListings(data)
+      setError('')
+      try {
+        const res = await fetch(`${API_URL}/vehicles/mine/list`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setListings(data)
+        }
+      } catch {
+        setError("Couldn't load your listings. Check your connection and try again.")
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     loadListings()
-  }, [user])
+  }, [user, retryCount])
 
   async function updateStatus(vehicleId, newStatus) {
     const res = await fetch(`${API_URL}/vehicles/${vehicleId}`, {
@@ -119,6 +127,18 @@ function Dashboard() {
         </div>
         {loading ? (
           <p className="text-textmuted text-sm mt-4">Loading your listings...</p>
+        ) : error ? (
+          <div className="mt-6 text-center border border-bordercol rounded-card p-10">
+            <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
+            <div>
+              <button
+                onClick={() => setRetryCount((c) => c + 1)}
+                className="inline-flex mt-4 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
         ) : listings.length === 0 ? (
           <div className="mt-6 text-center border border-bordercol rounded-card p-10">
             <p className="text-textmuted">You haven't listed any vehicles yet.</p>

@@ -27,6 +27,8 @@ function VehicleDetail() {
   const [similar, setSimilar] = useState([])
   const [sellerContact, setSellerContact] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
   const [offerModalOpen, setOfferModalOpen] = useState(false)
 
   // [slug] in the dependency array (not []) means: run this again
@@ -36,34 +38,56 @@ function VehicleDetail() {
   useEffect(() => {
     async function loadVehicle() {
       setLoading(true)
-      const data = await getVehicleBySlug(slug)
-      setVehicle(data)
-      setSellerContact(null)
+      setError('')
+      try {
+        const data = await getVehicleBySlug(slug)
+        setVehicle(data)
+        setSellerContact(null)
 
-      // Only fetch similar vehicles/seller contact if we actually found
-      // one — both need a real vehicle to look up.
-      if (data) {
-        const [similarData, contactData] = await Promise.all([
-          getSimilar(data),
-          getUserContact(data.owner),
-        ])
-        setSimilar(similarData)
-        setSellerContact(contactData)
+        // Only fetch similar vehicles/seller contact if we actually found
+        // one — both need a real vehicle to look up.
+        if (data) {
+          const [similarData, contactData] = await Promise.all([
+            getSimilar(data),
+            getUserContact(data.owner),
+          ])
+          setSimilar(similarData)
+          setSellerContact(contactData)
+        }
+      } catch {
+        setError("Couldn't load this vehicle. Check your connection and try again.")
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     loadVehicle()
-  }, [slug])
+  }, [slug, retryCount])
 
   // This hook must stay ABOVE any early return (Rules of Hooks, same
   // as before) — it now needs to handle THREE possible states instead
   // of two: still loading, not found, or actually found.
-  useDocumentTitle(loading ? 'Loading...' : vehicle ? `${vehicle.brand} ${vehicle.model}` : 'Vehicle Not Found')
+  useDocumentTitle(loading ? 'Loading...' : error ? 'Error' : vehicle ? `${vehicle.brand} ${vehicle.model}` : 'Vehicle Not Found')
 
   if (loading) {
     return (
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
         <p className="text-textmuted">Loading vehicle...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+        <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
+        <div>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     )
   }

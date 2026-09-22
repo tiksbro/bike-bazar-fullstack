@@ -7,16 +7,24 @@ function Dealers() {
   useDocumentTitle('Verified Dealers')
   const [dealers, setDealers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     async function loadDealers() {
       setLoading(true)
-      const data = await listDealers()
-      setDealers(data)
-      setLoading(false)
+      setError('')
+      try {
+        const data = await listDealers()
+        setDealers(data)
+      } catch {
+        setError("Couldn't load dealers. Check your connection and try again.")
+      } finally {
+        setLoading(false)
+      }
     }
     loadDealers()
-  }, [])
+  }, [retryCount])
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -25,6 +33,18 @@ function Dealers() {
 
       {loading ? (
         <p className="text-textmuted text-sm mt-6">Loading dealers...</p>
+      ) : error ? (
+        <div className="mt-6 text-center border border-bordercol rounded-card p-10">
+          <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
+          <div>
+            <button
+              onClick={() => setRetryCount((c) => c + 1)}
+              className="inline-flex mt-4 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       ) : dealers.length === 0 ? (
         <p className="text-textmuted text-sm mt-6">No dealers registered yet.</p>
       ) : (

@@ -8,23 +8,47 @@ function DealerDetail() {
   const { id } = useParams()
   const [dealer, setDealer] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     async function loadDealer() {
       setLoading(true)
-      const data = await getDealerById(id)
-      setDealer(data)
-      setLoading(false)
+      setError('')
+      try {
+        const data = await getDealerById(id)
+        setDealer(data)
+      } catch {
+        setError("Couldn't load this dealer. Check your connection and try again.")
+      } finally {
+        setLoading(false)
+      }
     }
     loadDealer()
-  }, [id])
+  }, [id, retryCount])
 
-  useDocumentTitle(loading ? 'Loading...' : dealer ? dealer.businessName : 'Dealer Not Found')
+  useDocumentTitle(loading ? 'Loading...' : error ? 'Error' : dealer ? dealer.businessName : 'Dealer Not Found')
 
   if (loading) {
     return (
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
         <p className="text-textmuted">Loading dealer...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
+        <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
+        <div>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     )
   }

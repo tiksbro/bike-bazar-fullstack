@@ -28,8 +28,16 @@ app.use('/api/compare', compareRouter)
 app.use('/api/dealers', dealersRouter)
 app.use('/api/users', usersRouter)
 
+mongoose.connection.on('error', (err) => {
+  console.error(`[${new Date().toISOString()}] MongoDB connection error:`, err.message)
+})
+
+mongoose.connection.on('disconnected', () => {
+  console.error(`[${new Date().toISOString()}] MongoDB disconnected`)
+})
+
 mongoose
-  .connect(process.env.MONGODB_URI)
+  .connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
   .then(() => {
     console.log('MongoDB connected successfully')
     app.listen(PORT, () => {

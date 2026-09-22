@@ -24,6 +24,8 @@ function Browse() {
 
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   function updateFilter(field, value) {
     setFilters({ ...filters, [field]: value })
@@ -37,12 +39,18 @@ function Browse() {
   useEffect(() => {
     async function loadResults() {
       setLoading(true)
-      const data = await listVehicles(filters)
-      setResults(data)
-      setLoading(false)
+      setError('')
+      try {
+        const data = await listVehicles(filters)
+        setResults(data)
+      } catch {
+        setError("Couldn't load vehicles. Check your connection and try again.")
+      } finally {
+        setLoading(false)
+      }
     }
     loadResults()
-  }, [filters])
+  }, [filters, retryCount])
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -131,6 +139,18 @@ function Browse() {
         <div>
           {loading ? (
             <p className="text-textmuted text-sm">Loading vehicles...</p>
+          ) : error ? (
+            <div className="text-center py-10">
+              <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
+              <div>
+                <button
+                  onClick={() => setRetryCount((c) => c + 1)}
+                  className="inline-flex mt-4 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
           ) : results.length === 0 ? (
             <p className="text-textmuted text-sm">No vehicles match these filters. Try clearing one.</p>
           ) : (

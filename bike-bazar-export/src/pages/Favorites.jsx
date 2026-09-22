@@ -8,21 +8,45 @@ function Favorites() {
   const { favoriteIds } = useFavorites()
   const [favoriteVehicles, setFavoriteVehicles] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     async function loadFavorites() {
       setLoading(true)
-      const data = await getByIds(favoriteIds)
-      setFavoriteVehicles(data)
-      setLoading(false)
+      setError('')
+      try {
+        const data = await getByIds(favoriteIds)
+        setFavoriteVehicles(data)
+      } catch {
+        setError("Couldn't load favorites. Check your connection and try again.")
+      } finally {
+        setLoading(false)
+      }
     }
     loadFavorites()
-  }, [favoriteIds])
+  }, [favoriteIds, retryCount])
 
   if (loading) {
     return (
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <p className="text-textmuted">Loading favorites...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
+        <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
+        <div>
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            className="inline-flex mt-4 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     )
   }

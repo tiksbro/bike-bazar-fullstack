@@ -6,7 +6,7 @@ import { getUserContact } from '../services/userService'
 import HealthScoreGauge from '../components/HealthScoreGauge'
 import HealthScoreBreakdown from '../components/HealthScoreBreakdown'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
-
+import MakeOfferModal from '../components/MakeOfferModal'
 
 const artBackgrounds = {
   orange: 'linear-gradient(160deg,#FDECE0,#F6C79B)',
@@ -31,10 +31,6 @@ function VehicleDetail() {
   const [retryCount, setRetryCount] = useState(0)
   const [offerModalOpen, setOfferModalOpen] = useState(false)
 
-  // [slug] in the dependency array (not []) means: run this again
-  // whenever slug changes — e.g. clicking a "Similar Vehicles" card
-  // changes the URL's slug WITHOUT fully reloading the page, so without
-  // this, the page would keep showing the FIRST vehicle you opened.
   useEffect(() => {
     async function loadVehicle() {
       setLoading(true)
@@ -52,7 +48,7 @@ function VehicleDetail() {
             getUserContact(data.owner),
           ])
           setSimilar(similarData)
-          setSellerContact(contactData)
+          setSellerContact(contactData) 
         }
       } catch {
         setError("Couldn't load this vehicle. Check your connection and try again.")
@@ -225,32 +221,7 @@ function VehicleDetail() {
         </div>
       )}
 
-      {offerModalOpen && <OfferModal onClose={() => setOfferModalOpen(false)} />}
-    </div>
-  )
-}
-
-function OfferModal({ onClose }) {
-  return (
-    <div
-      className="fixed inset-0 bg-ink/50 flex items-center justify-center z-50 px-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-card border border-bordercol p-6 max-w-sm w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="font-display font-bold text-lg">Make an Offer</h3>
-        <p className="text-sm text-textmuted mt-2">
-          Offer requests aren't available yet — for now, contact the seller directly using the button above.
-        </p>
-        <button
-          onClick={onClose}
-          className="bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-2.5 mt-4"
-        >
-          Close
-        </button>
-      </div>
+     {offerModalOpen && <MakeOfferModal vehicle={vehicle} onClose={() => setOfferModalOpen(false)} />}
     </div>
   )
 }

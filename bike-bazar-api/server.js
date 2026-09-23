@@ -10,6 +10,7 @@ const favoritesRouter = require('./routes/favorites')
 const compareRouter = require('./routes/compare')
 const dealersRouter = require('./routes/dealers')
 const usersRouter = require('./routes/users')
+const offersRouter = require('./routes/offers')
 
 const app = express()
 const PORT = process.env.PORT || 4000
@@ -27,6 +28,7 @@ app.use('/api/favorites', favoritesRouter)
 app.use('/api/compare', compareRouter)
 app.use('/api/dealers', dealersRouter)
 app.use('/api/users', usersRouter)
+app.use('/api/offers', offersRouter)
 
 mongoose.connection.on('error', (err) => {
   console.error(`[${new Date().toISOString()}] MongoDB connection error:`, err.message)

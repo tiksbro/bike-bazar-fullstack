@@ -18,6 +18,9 @@ function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [retryCount, setRetryCount] = useState(0)
+  const [offers, setOffers] = useState([])
+  const [offersLoading, setOffersLoading] = useState(true)
+  const [offersError, setOffersError] = useState('')
 
   function getToken() {
     return localStorage.getItem('bikebazar_token')
@@ -47,6 +50,30 @@ function Dashboard() {
     }
     loadListings()
   }, [user, retryCount])
+
+  useEffect(() => {
+    async function loadOffers() {
+      if (!user) {
+        setOffersLoading(false)
+        return
+      }
+      setOffersLoading(true)
+      setOffersError('')
+      try {
+        const res = await fetch(`${API_URL}/offers/received`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        })
+        if (!res.ok) throw new Error('Failed to load offers')
+        const data = await res.json()
+        setOffers(data)
+      } catch {
+        setOffersError("Couldn't load offers.")
+      } finally {
+        setOffersLoading(false)
+      }
+    }
+    loadOffers()
+  }, [user])
 
   async function updateStatus(vehicleId, newStatus) {
     const res = await fetch(`${API_URL}/vehicles/${vehicleId}`, {
@@ -88,6 +115,21 @@ function Dashboard() {
     }
   }
 
+  async function respondToOffer(offerId, action, counterAmount) {
+    const res = await fetch(`${API_URL}/offers/${offerId}/respond`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify({ action, counterAmount }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setOffers(offers.map((o) => (o.id === offerId ? updated : o)))
+    }
+  }
+
   if (!user) {
     return (
       <div className="max-w-[500px] mx-auto px-4 sm:px-6 py-24 text-center">
@@ -113,6 +155,23 @@ function Dashboard() {
         <StatCard label="Active" value={activeCount} />
         <StatCard label="Paused" value={pausedCount} />
         <StatCard label="Sold" value={soldCount} />
+      </div>
+
+      <div className="mt-10">
+        <h2 className="font-display font-bold text-xl">Offers Received</h2>
+        {offersLoading ? (
+          <p className="text-textmuted text-sm mt-4">Loading offers...</p>
+        ) : offersError ? (
+          <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-4 inline-block">{offersError}</p>
+        ) : offers.length === 0 ? (
+          <p className="text-textmuted text-sm mt-4">No offers yet.</p>
+        ) : (
+          <div className="flex flex-col gap-3 mt-4">
+            {offers.map((offer) => (
+              <OfferCard key={offer.id} offer={offer} onRespond={respondToOffer} />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-10">
@@ -224,6 +283,93 @@ function StatCard({ label, value }) {
     <div className="border border-bordercol rounded-card p-4">
       <p className="text-xs text-textfaint">{label}</p>
       <p className="font-display font-bold text-2xl mt-1">{value}</p>
+    </div>
+  )
+}
+
+function OfferCard({ offer, onRespond }) {
+  const [showCounter, setShowCounter] = useState(false)
+  const [counterAmount, setCounterAmount] = useState('')
+
+  const statusBadge = {
+    pending: { label: 'Pending', color: 'text-warning', bg: 'bg-warningbg' },
+    accepted: { label: 'Accepted', color: 'text-success', bg: 'bg-successbg' },
+    rejected: { label: 'Rejected', color: 'text-neutralbadge', bg: 'bg-neutralbadgebg' },
+    countered: { label: 'Countered', color: 'text-accent', bg: 'bg-accentsoftbg' },
+  }[offer.status]
+
+  function handleCounterSubmit() {
+    if (!counterAmount) return
+    onRespond(offer.id, 'counter', Number(counterAmount))
+    setShowCounter(false)
+  }
+
+  return (
+    <div className="border border-bordercol rounded-card p-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-display font-semibold">
+            {offer.vehicle.brand} {offer.vehicle.model}
+          </p>
+          <p className="text-sm text-textmuted mt-0.5">
+            From {offer.buyer.name} · Rs. {offer.amount.toLocaleString('en-IN')}
+          </p>
+          {offer.message && <p className="text-sm text-textmuted mt-1 italic">"{offer.message}"</p>}
+          {offer.status === 'countered' && (
+            <p className="text-sm text-accent mt-1">Your counter: Rs. {offer.counterAmount.toLocaleString('en-IN')}</p>
+          )}
+        </div>
+        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-badge shrink-0 ${statusBadge.color} ${statusBadge.bg}`}>
+          {statusBadge.label}
+        </span>
+      </div>
+
+      {offer.status === 'pending' && !showCounter && (
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => onRespond(offer.id, 'accept')}
+            className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-success text-white"
+          >
+            Accept
+          </button>
+          <button
+            onClick={() => setShowCounter(true)}
+            className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-bordercol"
+          >
+            Counter
+          </button>
+          <button
+            onClick={() => onRespond(offer.id, 'reject')}
+            className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-danger text-danger"
+          >
+            Reject
+          </button>
+        </div>
+      )}
+
+      {offer.status === 'pending' && showCounter && (
+        <div className="flex gap-2 mt-3">
+          <input
+            type="number"
+            value={counterAmount}
+            onChange={(e) => setCounterAmount(e.target.value)}
+            placeholder="Your counter amount"
+            className="flex-1 border border-bordercol rounded-ctl px-3 py-1.5 text-sm"
+          />
+          <button
+            onClick={handleCounterSubmit}
+            className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-accent text-white"
+          >
+            Send
+          </button>
+          <button
+            onClick={() => setShowCounter(false)}
+            className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-bordercol"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   )
 }

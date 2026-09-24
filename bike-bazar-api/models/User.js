@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema({
   brands: { type: [String] },
   verified: { type: Boolean, default: false },
   subscriptionTier: { type: String, enum: ['free', 'pro'], default: 'free' },
+  isAdmin: { type: Boolean, default: false },
 }, {
   toJSON: {
     virtuals: true,

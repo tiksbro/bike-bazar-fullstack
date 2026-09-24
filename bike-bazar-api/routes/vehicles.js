@@ -2,6 +2,7 @@ const express = require('express')
 const Vehicle = require('../models/Vehicle')
 const User = require('../models/User')
 const requireAuth = require('../middleware/requireAuth')
+const { computePriceInsight, buildPriceInsightGroups, applyPriceInsight } = require('../utils/priceInsight')
 
 const router = express.Router()
 
@@ -57,6 +58,12 @@ router.get('/', async (req, res) => {
     else if (sortBy === 'lowestKm') sort = { mileageKm: 1 }
 
     const vehicles = await Vehicle.find(filter).sort(sort)
+
+    const groupMap = await buildPriceInsightGroups()
+    vehicles.forEach((vehicle) => {
+      vehicle.priceInsight = applyPriceInsight(vehicle, groupMap)
+    })
+
     res.json(vehicles)
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch vehicles', details: err.message })
@@ -80,6 +87,9 @@ router.get('/:slug', async (req, res) => {
     if (!vehicle) {
       return res.status(404).json({ error: `No vehicle found with slug "${req.params.slug}"` })
     }
+
+    vehicle.priceInsight = await computePriceInsight(vehicle)
+
     res.json(vehicle)
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch vehicle', details: err.message })

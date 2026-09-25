@@ -40,8 +40,7 @@ function VehicleDetail() {
         setVehicle(data)
         setSellerContact(null)
 
-        // Only fetch similar vehicles/seller contact if we actually found
-        // one — both need a real vehicle to look up.
+        
         if (data) {
           const [similarData, contactData] = await Promise.all([
             getSimilar(data),
@@ -59,9 +58,6 @@ function VehicleDetail() {
     loadVehicle()
   }, [slug, retryCount])
 
-  // This hook must stay ABOVE any early return (Rules of Hooks, same
-  // as before) — it now needs to handle THREE possible states instead
-  // of two: still loading, not found, or actually found.
   useDocumentTitle(loading ? 'Loading...' : error ? 'Error' : vehicle ? `${vehicle.brand} ${vehicle.model}` : 'Vehicle Not Found')
 
   if (loading) {
@@ -173,7 +169,7 @@ function VehicleDetail() {
             <p className="text-sm text-textmuted mt-0.5">{vehicle.location}</p>
           </div>
 
-          <ReportListingBox />
+          <ReportListingBox vehicleId={vehicle.id} />
         </div>
       </div>
 
@@ -225,16 +221,38 @@ function VehicleDetail() {
     </div>
   )
 }
-
-function ReportListingBox() {
+function ReportListingBox({ vehicleId }) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     if (!reason) return
-    setSubmitted(true)
+    setSubmitting(true)
+    setError('')
+    try {
+      const token = localStorage.getItem('bikebazar_token')
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000/api'}/reports/${vehicleId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to submit report')
+      }
+      setSubmitted(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (submitted) {
@@ -269,13 +287,16 @@ function ReportListingBox() {
         <option value="sold">Already sold</option>
         <option value="other">Other</option>
       </select>
+
+      {error && <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-2">{error}</p>}
+
       <div className="flex gap-2 mt-3">
         <button
           type="submit"
-          disabled={!reason}
+          disabled={!reason || submitting}
           className="bg-ink text-white text-sm font-semibold px-4 py-2 rounded-btn disabled:opacity-40"
         >
-          Submit Report
+          {submitting ? 'Submitting...' : 'Submit Report'}
         </button>
         <button
           type="button"

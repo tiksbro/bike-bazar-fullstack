@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { getVehicleBySlug } from '../services/vehicleService'
+import { useAuth } from '../context/AuthContext'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
 const initialPending = [
   { slug: 'honda-cb-shine-2019', status: 'pending' },
@@ -7,12 +10,27 @@ const initialPending = [
   { slug: 'ktm-rc-200-2019', status: 'pending' },
 ]
 
+const reasonLabels = {
+  fake: 'Fake listing',
+  scam: 'Scam',
+  incorrect: 'Incorrect information',
+  duplicate: 'Duplicate listing',
+  sold: 'Already sold',
+  other: 'Other',
+}
+
 function Admin() {
+  const { user } = useAuth()
   const [pending, setPending] = useState(initialPending)
   const [vehicles, setVehicles] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [retryCount, setRetryCount] = useState(0)
+
+  const [reports, setReports] = useState([])
+  const [reportsLoading, setReportsLoading] = useState(true)
+  const [reportsError, setReportsError] = useState('')
+  const [reportsForbidden, setReportsForbidden] = useState(false)
 
   useEffect(() => {
     async function loadVehicles() {
@@ -30,11 +48,58 @@ function Admin() {
     loadVehicles()
   }, [pending, retryCount])
 
+  useEffect(() => {
+    async function loadReports() {
+      if (!user) {
+        setReportsLoading(false)
+        return
+      }
+      setReportsLoading(true)
+      setReportsError('')
+      setReportsForbidden(false)
+      try {
+        const token = localStorage.getItem('bikebazar_token')
+        const res = await fetch(`${API_URL}/reports`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.status === 403) {
+          setReportsForbidden(true)
+          return
+        }
+        if (!res.ok) throw new Error('Failed to load reports')
+        const data = await res.json()
+        setReports(data)
+      } catch {
+        setReportsError("Couldn't load reports. Check your connection and try again.")
+      } finally {
+        setReportsLoading(false)
+      }
+    }
+    loadReports()
+  }, [user])
+
+  async function respondToReport(reportId, status) {
+    const token = localStorage.getItem('bikebazar_token')
+    const res = await fetch(`${API_URL}/reports/${reportId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    })
+    if (res.ok) {
+      const updated = await res.json()
+      setReports(reports.map((r) => (r.id === reportId ? updated : r)))
+    }
+  }
+
   function updateStatus(slug, newStatus) {
     setPending(pending.map((p) => (p.slug === slug ? { ...p, status: newStatus } : p)))
   }
 
   const pendingCount = pending.filter((p) => p.status === 'pending').length
+  const pendingReportsCount = reports.filter((r) => r.status === 'pending').length
 
   if (loading) {
     return (
@@ -64,11 +129,33 @@ function Admin() {
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="font-display font-bold text-[26px]">Admin Dashboard</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
         <StatCard label="Users" value="12,450" />
         <StatCard label="Active Listings" value="4,820" />
         <StatCard label="Dealers" value="156" />
         <StatCard label="Pending Approvals" value={pendingCount} />
+        <StatCard label="Pending Reports" value={pendingReportsCount} />
+      </div>
+
+      <div className="mt-10">
+        <h2 className="font-display font-bold text-xl">Reported Listings</h2>
+        {reportsForbidden ? (
+          <p className="text-sm text-textmuted mt-4">
+            Admin access required — this section is only visible to admin accounts.
+          </p>
+        ) : reportsLoading ? (
+          <p className="text-textmuted text-sm mt-4">Loading reports...</p>
+        ) : reportsError ? (
+          <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-4 inline-block">{reportsError}</p>
+        ) : reports.length === 0 ? (
+          <p className="text-textmuted text-sm mt-4">No reports.</p>
+        ) : (
+          <div className="flex flex-col gap-3 mt-4">
+            {reports.map((report) => (
+              <ReportCard key={report.id} report={report} onRespond={respondToReport} />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-10">
@@ -130,6 +217,49 @@ function StatCard({ label, value }) {
     <div className="border border-bordercol rounded-card p-4">
       <p className="text-xs text-textfaint">{label}</p>
       <p className="font-display font-bold text-2xl mt-1">{value}</p>
+    </div>
+  )
+}
+
+function ReportCard({ report, onRespond }) {
+  const statusBadge = {
+    pending: { label: 'Pending', color: 'text-warning', bg: 'bg-warningbg' },
+    reviewed: { label: 'Reviewed', color: 'text-success', bg: 'bg-successbg' },
+    dismissed: { label: 'Dismissed', color: 'text-neutralbadge', bg: 'bg-neutralbadgebg' },
+  }[report.status]
+
+  return (
+    <div className="border border-bordercol rounded-card p-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-display font-semibold">
+            {report.vehicle.brand} {report.vehicle.model}
+          </p>
+          <p className="text-sm text-textmuted mt-0.5">
+            Reported by {report.reporter.name} · {reasonLabels[report.reason]}
+          </p>
+        </div>
+        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-badge shrink-0 ${statusBadge.color} ${statusBadge.bg}`}>
+          {statusBadge.label}
+        </span>
+      </div>
+
+      {report.status === 'pending' && (
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => onRespond(report.id, 'reviewed')}
+            className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-success text-white"
+          >
+            Mark Reviewed
+          </button>
+          <button
+            onClick={() => onRespond(report.id, 'dismissed')}
+            className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-bordercol"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
     </div>
   )
 }

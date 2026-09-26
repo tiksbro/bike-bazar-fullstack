@@ -6,3 +6,8 @@ export async function getUserContact(id) {
   if (!res.ok) throw new Error('Failed to fetch user contact info')
   return res.json()
 }
+export async function getUserRatings(userId) {
+  const res = await fetch(`${API_URL}/users/${userId}/ratings`)
+  if (!res.ok) return { ratings: [], averageStars: null, totalCount: 0 }
+  return res.json()
+}

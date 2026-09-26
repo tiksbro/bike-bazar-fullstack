@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import VehicleCard, { VehicleArt } from '../components/VehicleCard'
 import { getVehicleBySlug, getSimilar, getHealthScore } from '../services/vehicleService'
-import { getUserContact } from '../services/userService'
+import { getUserContact, getUserRatings } from '../services/userService'
 import HealthScoreGauge from '../components/HealthScoreGauge'
 import HealthScoreBreakdown from '../components/HealthScoreBreakdown'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
@@ -26,6 +26,7 @@ function VehicleDetail() {
   const [vehicle, setVehicle] = useState(null)
   const [similar, setSimilar] = useState([])
   const [sellerContact, setSellerContact] = useState(null)
+  const [sellerRating, setSellerRating] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [retryCount, setRetryCount] = useState(0)
@@ -39,15 +40,17 @@ function VehicleDetail() {
         const data = await getVehicleBySlug(slug)
         setVehicle(data)
         setSellerContact(null)
-
+        setSellerRating(null)
         
         if (data) {
-          const [similarData, contactData] = await Promise.all([
+          const [similarData, contactData, ratingData] = await Promise.all([
             getSimilar(data),
             getUserContact(data.owner),
+            getUserRatings(data.owner)
           ])
           setSimilar(similarData)
-          setSellerContact(contactData) 
+          setSellerContact(contactData)
+          setSellerRating(ratingData)
         }
       } catch {
         setError("Couldn't load this vehicle. Check your connection and try again.")
@@ -163,12 +166,19 @@ function VehicleDetail() {
 
           <div className="mt-8 border border-bordercol rounded-card p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-textfaint">Seller</p>
-            <p className="font-semibold mt-1">
+                        <p className="font-semibold mt-1">
               {vehicle.verifiedSeller ? 'Verified Individual Seller' : 'Unverified Seller'}
             </p>
             <p className="text-sm text-textmuted mt-0.5">{vehicle.location}</p>
+            {sellerRating && sellerRating.totalCount > 0 && (
+              <p className="text-sm mt-1.5">
+                <span className="text-warning">★</span> {sellerRating.averageStars}{' '}
+                <span className="text-textfaint">
+                  ({sellerRating.totalCount} rating{sellerRating.totalCount > 1 ? 's' : ''})
+                </span>
+              </p>
+            )}
           </div>
-
           <ReportListingBox vehicleId={vehicle.id} />
         </div>
       </div>

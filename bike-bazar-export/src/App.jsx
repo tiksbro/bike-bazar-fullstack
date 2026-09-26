@@ -22,6 +22,7 @@ import Login from './pages/Login'
 import Profile from './pages/Profile'
 import NotFound from './pages/NotFound'
 import Admin from './pages/Admin'
+import MyOffers from './pages/MyOffers'
 
 function App() {
   return (
@@ -50,6 +51,7 @@ function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
+                <Route path="/my-offers" element={<MyOffers />} />
               </Route>
             </Routes>
           </BrowserRouter>

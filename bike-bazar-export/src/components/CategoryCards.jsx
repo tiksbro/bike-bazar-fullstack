@@ -1,11 +1,44 @@
-const categories = [
-  { name: 'Motorcycles', count: '1,840 listings', status: 'live' },
-  { name: 'Scooters', count: '962 listings', status: 'live' },
-  { name: 'Electric', count: '213 listings', status: 'live' },
-  { name: 'Cars', count: 'Opening next', status: 'soon' },
-]
+import { useState, useEffect } from 'react'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
 function CategoryCards() {
+  const [counts, setCounts] = useState(null)
+
+  useEffect(() => {
+    async function loadCounts() {
+      try {
+        const res = await fetch(`${API_URL}/vehicles/stats/categories`)
+        if (res.ok) {
+          setCounts(await res.json())
+        }
+      } catch {
+        // Silent failure — cards just keep showing "..." below rather
+        // than breaking the whole homepage over one stats call.
+      }
+    }
+    loadCounts()
+  }, [])
+
+  const categories = [
+    {
+      name: 'Motorcycles',
+      count: counts ? `${counts.motorcycles.toLocaleString('en-IN')} listings` : '...',
+      status: 'live',
+    },
+    {
+      name: 'Scooters',
+      count: counts ? `${counts.scooters.toLocaleString('en-IN')} listings` : '...',
+      status: 'live',
+    },
+    {
+      name: 'Electric',
+      count: counts ? `${counts.electric.toLocaleString('en-IN')} listings` : '...',
+      status: 'live',
+    },
+    { name: 'Cars', count: 'Opening next', status: 'soon' },
+  ]
+
   return (
     <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8" style={{ marginTop: 44 }}>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-[18px]">

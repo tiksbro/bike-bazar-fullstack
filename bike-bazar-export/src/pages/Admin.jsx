@@ -31,6 +31,7 @@ function Admin() {
   const [reportsLoading, setReportsLoading] = useState(true)
   const [reportsError, setReportsError] = useState('')
   const [reportsForbidden, setReportsForbidden] = useState(false)
+  const [adminStats, setAdminStats] = useState(null)
 
   useEffect(() => {
     async function loadVehicles() {
@@ -76,6 +77,23 @@ function Admin() {
       }
     }
     loadReports()
+  }, [user])
+  
+  useEffect(() => {
+    async function loadAdminStats() {
+      if (!user) return
+      try {
+        const token = localStorage.getItem('bikebazar_token')
+        const res = await fetch(`${API_URL}/admin/stats`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) {
+          setAdminStats(await res.json())
+        }
+      } catch {
+      }
+    }
+    loadAdminStats()
   }, [user])
 
   async function respondToReport(reportId, status) {
@@ -129,10 +147,10 @@ function Admin() {
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="font-display font-bold text-[26px]">Admin Dashboard</h1>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
-        <StatCard label="Users" value="12,450" />
-        <StatCard label="Active Listings" value="4,820" />
-        <StatCard label="Dealers" value="156" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
+        <StatCard label="Users" value={adminStats ? adminStats.totalUsers.toLocaleString('en-IN') : '—'} />
+        <StatCard label="Active Listings" value={adminStats ? adminStats.activeListings.toLocaleString('en-IN') : '—'} />
+        <StatCard label="Dealers" value={adminStats ? adminStats.totalDealers.toLocaleString('en-IN') : '—'} />
         <StatCard label="Pending Approvals" value={pendingCount} />
         <StatCard label="Pending Reports" value={pendingReportsCount} />
       </div>

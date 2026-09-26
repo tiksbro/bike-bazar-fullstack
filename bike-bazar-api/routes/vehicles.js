@@ -80,6 +80,21 @@ router.get('/mine/list', requireAuth, async (req, res) => {
   }
 })
 
+// GET /api/vehicles/stats/categories
+router.get('/stats/categories', async (req, res) => {
+  try {
+    const [motorcycles, scooters, electric] = await Promise.all([
+      Vehicle.countDocuments({ type: 'motorcycle' }),
+      Vehicle.countDocuments({ type: 'scooter' }),
+      Vehicle.countDocuments({ fuelType: 'Electric' }),
+    ])
+
+    res.json({ motorcycles, scooters, electric })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch category stats', details: err.message })
+  }
+})
+
 // GET /api/vehicles/:slug
 router.get('/:slug', async (req, res) => {
   try {

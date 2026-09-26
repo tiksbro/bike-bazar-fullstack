@@ -1,14 +1,35 @@
-const budgets = [
-  { label: 'Under Rs. 1 Lakh', count: '312 bikes' },
-  { label: 'Rs. 1–2 Lakh', count: '728 bikes' },
-  { label: 'Rs. 2–3 Lakh', count: '641 bikes' },
-  { label: 'Rs. 3–5 Lakh', count: '409 bikes' },
-  { label: 'Above Rs. 5 Lakh', count: '158 bikes' },
-]
+import { useState, useEffect } from 'react'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
 const brands = ['Yamaha', 'Honda', 'Bajaj', 'TVS', 'Royal Enfield', 'KTM', 'Hero', 'Suzuki', 'NIU', 'Yezdi', 'Other']
 
 function BudgetAndBrand() {
+  const [counts, setCounts] = useState(null)
+
+  useEffect(() => {
+    async function loadCounts() {
+      try {
+        const res = await fetch(`${API_URL}/vehicles/stats/budget-ranges`)
+        if (res.ok) {
+          setCounts(await res.json())
+        }
+      } catch {
+        // Silent failure — cards just keep showing "..." below rather
+        // than breaking the whole homepage over one stats call.
+      }
+    }
+    loadCounts()
+  }, [])
+
+  const budgets = [
+    { label: 'Under Rs. 1 Lakh', count: counts ? `${counts.under1Lakh} bikes` : '...' },
+    { label: 'Rs. 1–2 Lakh', count: counts ? `${counts.oneToTwoLakh} bikes` : '...' },
+    { label: 'Rs. 2–3 Lakh', count: counts ? `${counts.twoToThreeLakh} bikes` : '...' },
+    { label: 'Rs. 3–5 Lakh', count: counts ? `${counts.threeToFiveLakh} bikes` : '...' },
+    { label: 'Above Rs. 5 Lakh', count: counts ? `${counts.aboveFiveLakh} bikes` : '...' },
+  ]
+
   return (
     <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8" style={{ marginTop: 48 }}>
       <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-8">

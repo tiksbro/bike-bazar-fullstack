@@ -95,6 +95,23 @@ router.get('/stats/categories', async (req, res) => {
   }
 })
 
+// GET /api/vehicles/stats/budget-ranges
+router.get('/stats/budget-ranges', async (req, res) => {
+  try {
+    const [under1Lakh, oneToTwoLakh, twoToThreeLakh, threeToFiveLakh, aboveFiveLakh] = await Promise.all([
+      Vehicle.countDocuments({ price: { $lt: 100000 } }),
+      Vehicle.countDocuments({ price: { $gte: 100000, $lt: 200000 } }),
+      Vehicle.countDocuments({ price: { $gte: 200000, $lt: 300000 } }),
+      Vehicle.countDocuments({ price: { $gte: 300000, $lt: 500000 } }),
+      Vehicle.countDocuments({ price: { $gte: 500000 } }),
+    ])
+
+    res.json({ under1Lakh, oneToTwoLakh, twoToThreeLakh, threeToFiveLakh, aboveFiveLakh })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch budget range stats', details: err.message })
+  }
+})
+
 // GET /api/vehicles/:slug
 router.get('/:slug', async (req, res) => {
   try {

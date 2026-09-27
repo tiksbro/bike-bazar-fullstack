@@ -114,7 +114,14 @@ function VehicleDetail() {
         <div>
           <h1 className="font-display font-bold text-[28px]">{vehicle.brand} {vehicle.model}</h1>
           <p className="text-textmuted mt-1">
-            {vehicle.year} · {vehicle.mileageKm.toLocaleString()} KM · {vehicle.engineCc}cc · {vehicle.fuelType}
+            {[
+              vehicle.year,
+              `${vehicle.mileageKm.toLocaleString()} KM`,
+              vehicle.fuelType !== 'Electric' && `${vehicle.engineCc}cc`,
+              vehicle.fuelType,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </p>
           <p className="text-textmuted">{vehicle.location}</p>
 

@@ -42,7 +42,7 @@ function Navbar() {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-[26px] text-[14.5px]">
-            <NavLink to="/" className={navLinkClass} end>Buy Vehicle</NavLink>
+            <NavLink to="/vehicles" className={navLinkClass}>Buy Vehicle</NavLink>
             <NavLink to="/sell" className={navLinkClass}>Sell</NavLink>
             <NavLink to="/new-bikes" className={navLinkClass}>New Bikes</NavLink>
             <NavLink to="/compare" className={navLinkClass}>Compare</NavLink>
@@ -110,7 +110,7 @@ function Navbar() {
 
         {menuOpen && (
           <nav className="lg:hidden pb-4 flex flex-col gap-1 border-t border-bordercol pt-3">
-            <NavLink to="/" className={mobileLinkClass} end onClick={closeMenu}>Buy Vehicle</NavLink>
+            <NavLink to="/vehicles" className={mobileLinkClass} onClick={closeMenu}>Buy Vehicle</NavLink>
             <NavLink to="/sell" className={mobileLinkClass} onClick={closeMenu}>Sell</NavLink>
             <NavLink to="/new-bikes" className={mobileLinkClass} onClick={closeMenu}>New Bikes</NavLink>
             <NavLink to="/compare" className={mobileLinkClass} onClick={closeMenu}>Compare</NavLink>

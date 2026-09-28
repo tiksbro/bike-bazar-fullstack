@@ -1,13 +1,6 @@
 @import "tailwindcss";
 
-/*
-  Bike Bazar design tokens.
-  These come straight from the design handoff doc.
-  Because we use Tailwind v4, we declare tokens here in CSS
-  using @theme, and Tailwind turns each one into utility classes
-  automatically. Example: --color-ink below gives us bg-ink,
-  text-ink, border-ink everywhere in our components.
-*/
+
 @theme {
   --font-display: "Space Grotesk", sans-serif;
   --font-body: "Plus Jakarta Sans", sans-serif;
@@ -28,16 +21,17 @@
   --color-accentsoftborder: #D6DFFA;
   --color-accentsofttext: #1B3AA0;
 
-  --color-success: #12805C;
-  --color-successbg: #E3F3EC;
-  --color-warning: #8A5A12;
-  --color-warningbg: #FBF0DA;
-  --color-danger: #A23A2C;
-  --color-dangerbg: #FBE6E2;
-  --color-featured: #8A3B12;
-  --color-featuredbg: #FDEBD8;
-  --color-neutralbadge: #6B6F76;
-  --color-neutralbadgebg: #EFEFEA;
+  
+  --color-success: #0B6B4B;
+  --color-successbg: #DDF4EA;
+  --color-warning: #8A5300;
+  --color-warningbg: #FFF1CC;
+  --color-danger: #B42318;
+  --color-dangerbg: #FDE7E4;
+  --color-featured: #F5B400;
+  --color-featuredbg: #0E1116;
+  --color-neutralbadge: #3D4555;
+  --color-neutralbadgebg: #EEF1F6;
 
   --radius-badge: 6px;
   --radius-ctl: 9px;
@@ -45,10 +39,29 @@
   --radius-cardsm: 12px;
   --radius-card: 14px;
   --radius-band: 16px;
+
+  --shadow-card: 0 1px 2px rgba(14, 17, 22, 0.04), 0 4px 12px rgba(14, 17, 22, 0.05);
+  --shadow-cardhover: 0 2px 4px rgba(14, 17, 22, 0.05), 0 12px 28px rgba(14, 17, 22, 0.1);
+  --shadow-btn: 0 4px 12px rgba(43, 91, 227, 0.25);
+  --shadow-pop: 0 24px 60px rgba(14, 17, 22, 0.2);
 }
 
 body {
   background: var(--color-pagebg);
   font-family: var(--font-body);
   color: var(--color-ink);
+}
+
+button:not(:disabled),
+[role="button"]:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }

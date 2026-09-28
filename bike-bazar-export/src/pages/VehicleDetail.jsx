@@ -7,6 +7,7 @@ import HealthScoreGauge from '../components/HealthScoreGauge'
 import HealthScoreBreakdown from '../components/HealthScoreBreakdown'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import MakeOfferModal from '../components/MakeOfferModal'
+import { PriceBadge } from '../components/Badge'
 
 const artBackgrounds = {
   orange: 'linear-gradient(160deg,#FDECE0,#F6C79B)',
@@ -15,11 +16,6 @@ const artBackgrounds = {
   teal: 'linear-gradient(160deg,#E1F4EE,#A9DCCB)',
 }
 
-const priceBadgeStyles = {
-  good: { label: 'Good Price', color: '#12805C', bg: '#E3F3EC' },
-  fair: { label: 'Fair Price', color: '#8A5A12', bg: '#FBF0DA' },
-  high: { label: 'High Price', color: '#A23A2C', bg: '#FBE6E2' },
-}
 
 function VehicleDetail() {
   const { slug } = useParams()
@@ -99,7 +95,6 @@ function VehicleDetail() {
     )
   }
 
-  const priceBadge = priceBadgeStyles[vehicle.priceInsight]
   const healthScore = getHealthScore(vehicle)
 
   return (
@@ -108,7 +103,7 @@ function VehicleDetail() {
 
       <div className="grid md:grid-cols-2 gap-8 mt-4">
         <div className="relative rounded-card overflow-hidden h-[340px]" style={{ background: artBackgrounds[vehicle.artColor] }}>
-          <VehicleArt type={vehicle.type} />
+                    <VehicleArt type={vehicle.type} color={vehicle.artColor} />
         </div>
 
         <div>
@@ -143,9 +138,7 @@ function VehicleDetail() {
                 <span className="text-xs font-semibold text-success">Verified Seller</span>
               </span>
             )}
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-badge" style={{ color: priceBadge.color, background: priceBadge.bg }}>
-              {priceBadge.label}
-            </span>
+                       <PriceBadge insight={vehicle.priceInsight} />
           </div>
 
           <div className="flex gap-3 mt-6">

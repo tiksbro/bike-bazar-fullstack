@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import Button from '../components/Button'
+import Card from '../components/Card'
+import Badge from '../components/Badge'
+import StatCard from '../components/StatCard'
+import EmptyState from '../components/EmptyState'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
-const statusStyles = {
-  active: { label: 'Active', color: 'text-success', bg: 'bg-successbg' },
-  paused: { label: 'Paused', color: 'text-warning', bg: 'bg-warningbg' },
-  sold: { label: 'Sold', color: 'text-neutralbadge', bg: 'bg-neutralbadgebg' },
+// Each listing status gets a Badge look (colors come from the design tokens).
+const listingStatus = {
+  active: { label: 'Active', variant: 'success' },
+  paused: { label: 'Paused', variant: 'warning' },
+  sold: { label: 'Sold', variant: 'neutral' },
 }
 
 function Dashboard() {
@@ -134,9 +139,9 @@ function Dashboard() {
     return (
       <div className="max-w-[500px] mx-auto px-4 sm:px-6 py-24 text-center">
         <h1 className="font-display font-bold text-2xl">Log In to View Your Dashboard</h1>
-        <Link to="/login" className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3">
+        <Button to="/login" className="mt-6">
           Log In
-        </Link>
+        </Button>
       </div>
     )
   }
@@ -164,7 +169,12 @@ function Dashboard() {
         ) : offersError ? (
           <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-4 inline-block">{offersError}</p>
         ) : offers.length === 0 ? (
-          <p className="text-textmuted text-sm mt-4">No offers yet.</p>
+          <div className="mt-4">
+            <EmptyState
+              title="No offers yet"
+              message="When someone makes an offer on one of your bikes, it will show up here."
+            />
+          </div>
         ) : (
           <div className="flex flex-col gap-3 mt-4">
             {offers.map((offer) => (
@@ -177,98 +187,87 @@ function Dashboard() {
       <div className="mt-10">
         <div className="flex items-center justify-between">
           <h2 className="font-display font-bold text-xl">Your Listings</h2>
-          <Link
-            to="/sell"
-            className="text-sm font-semibold px-4 py-2 rounded-btn bg-accent hover:bg-accenthover transition text-white"
-          >
+          <Button to="/sell" size="sm">
             + Add Vehicle
-          </Link>
+          </Button>
         </div>
         {loading ? (
           <p className="text-textmuted text-sm mt-4">Loading your listings...</p>
         ) : error ? (
-          <div className="mt-6 text-center border border-bordercol rounded-card p-10">
+          <Card padding="lg" className="mt-6 text-center">
             <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
-            <div>
-              <button
-                onClick={() => setRetryCount((c) => c + 1)}
-                className="inline-flex mt-4 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
-              >
-                Try Again
-              </button>
+            <div className="mt-4">
+              <Button onClick={() => setRetryCount((c) => c + 1)}>Try Again</Button>
             </div>
-          </div>
+          </Card>
         ) : listings.length === 0 ? (
-          <div className="mt-6 text-center border border-bordercol rounded-card p-10">
-            <p className="text-textmuted">You haven't listed any vehicles yet.</p>
-            <Link to="/sell" className="inline-flex mt-4 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3">
-              Sell Your Vehicle
-            </Link>
+          <div className="mt-6">
+            <EmptyState
+              title="You haven't listed any bikes yet"
+              message="Listing takes about 2 minutes, and you can edit it anytime."
+              actionLabel="Sell Your Vehicle"
+              actionTo="/sell"
+            />
           </div>
         ) : (
           <div className="flex flex-col gap-3 mt-4">
             {listings.map((vehicle) => {
               const status = vehicle.status || 'active'
-              const s = statusStyles[status]
+              const s = listingStatus[status]
               return (
-                <div
+                <Card
                   key={vehicle.id}
-                  className="border border-bordercol rounded-card p-4 flex flex-col sm:flex-row sm:items-center gap-4"
+                  padding="sm"
+                  className="flex flex-col sm:flex-row sm:items-center gap-4"
                 >
                   <div className="flex-1">
                     <p className="font-display font-semibold">
                       {vehicle.brand} {vehicle.model}
                     </p>
                     <p className="text-sm text-textmuted">Rs. {vehicle.price.toLocaleString('en-IN')}</p>
-                    <span className={`inline-block mt-1 text-[11px] font-bold px-2 py-0.5 rounded-badge ${s.color} ${s.bg}`}>
-                      {s.label}
-                    </span>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <Badge variant={s.variant} dot>
+                        {s.label}
+                      </Badge>
+                      {vehicle.featured && (
+                        <Badge variant="featured">
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z" />
+                          </svg>
+                          Featured
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex gap-2 flex-wrap">
-                    <Link
-                      to={`/vehicle/${vehicle.slug}`}
-                      className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-bordercol"
-                    >
+                    <Button to={`/vehicle/${vehicle.slug}`} variant="secondary" size="sm">
                       View
-                    </Link>
+                    </Button>
                     {status !== 'sold' && (
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => updateStatus(vehicle.id, status === 'active' ? 'paused' : 'active')}
-                        className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-bordercol"
                       >
                         {status === 'active' ? 'Pause' : 'Activate'}
-                      </button>
+                      </Button>
                     )}
                     {status !== 'sold' && (
-                      <button
-                        onClick={() => updateStatus(vehicle.id, 'sold')}
-                        className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-ink text-white"
-                      >
+                      <Button variant="dark" size="sm" onClick={() => updateStatus(vehicle.id, 'sold')}>
                         Mark Sold
-                      </button>
+                      </Button>
                     )}
                     {status !== 'sold' && !vehicle.featured && (
-                      <button
-                        onClick={() => boostListing(vehicle.id, 7)}
-                        className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-accent text-white"
-                      >
+                      <Button size="sm" onClick={() => boostListing(vehicle.id, 7)}>
                         Boost (7 days)
-                      </button>
+                      </Button>
                     )}
-                    {vehicle.featured && (
-                      <span className="text-[11px] font-bold px-2 py-1 rounded-badge text-featured bg-featuredbg">
-                        ⭐ Featured
-                      </span>
-                    )}
-                    <button
-                      onClick={() => deleteListing(vehicle.id)}
-                      className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-danger text-danger"
-                    >
+                    <Button variant="danger" size="sm" onClick={() => deleteListing(vehicle.id)}>
                       Delete
-                    </button>
+                    </Button>
                   </div>
-                </div>
+                </Card>
               )
             })}
           </div>
@@ -278,25 +277,19 @@ function Dashboard() {
   )
 }
 
-function StatCard({ label, value }) {
-  return (
-    <div className="border border-bordercol rounded-card p-4">
-      <p className="text-xs text-textfaint">{label}</p>
-      <p className="font-display font-bold text-2xl mt-1">{value}</p>
-    </div>
-  )
+// How each offer status looks.
+const offerStatus = {
+  pending: { label: 'Pending', variant: 'warning' },
+  accepted: { label: 'Accepted', variant: 'success' },
+  rejected: { label: 'Rejected', variant: 'neutral' },
+  countered: { label: 'Countered', variant: 'info' },
 }
 
 function OfferCard({ offer, onRespond }) {
   const [showCounter, setShowCounter] = useState(false)
   const [counterAmount, setCounterAmount] = useState('')
 
-  const statusBadge = {
-    pending: { label: 'Pending', color: 'text-warning', bg: 'bg-warningbg' },
-    accepted: { label: 'Accepted', color: 'text-success', bg: 'bg-successbg' },
-    rejected: { label: 'Rejected', color: 'text-neutralbadge', bg: 'bg-neutralbadgebg' },
-    countered: { label: 'Countered', color: 'text-accent', bg: 'bg-accentsoftbg' },
-  }[offer.status]
+  const s = offerStatus[offer.status]
 
   function handleCounterSubmit() {
     if (!counterAmount) return
@@ -305,7 +298,8 @@ function OfferCard({ offer, onRespond }) {
   }
 
   return (
-    <div className="border border-bordercol rounded-card p-4">
+    // A pending offer is waiting for a reply, so its card gets a soft amber tint.
+    <Card padding="sm" tone={offer.status === 'pending' ? 'attention' : 'default'}>
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="font-display font-semibold">
@@ -319,31 +313,22 @@ function OfferCard({ offer, onRespond }) {
             <p className="text-sm text-accent mt-1">Your counter: Rs. {offer.counterAmount.toLocaleString('en-IN')}</p>
           )}
         </div>
-        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-badge shrink-0 ${statusBadge.color} ${statusBadge.bg}`}>
-          {statusBadge.label}
-        </span>
+        <Badge variant={s.variant} dot>
+          {s.label}
+        </Badge>
       </div>
 
       {offer.status === 'pending' && !showCounter && (
         <div className="flex gap-2 mt-3">
-          <button
-            onClick={() => onRespond(offer.id, 'accept')}
-            className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-success text-white"
-          >
+          <Button size="sm" onClick={() => onRespond(offer.id, 'accept')}>
             Accept
-          </button>
-          <button
-            onClick={() => setShowCounter(true)}
-            className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-bordercol"
-          >
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setShowCounter(true)}>
             Counter
-          </button>
-          <button
-            onClick={() => onRespond(offer.id, 'reject')}
-            className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-danger text-danger"
-          >
+          </Button>
+          <Button variant="danger" size="sm" onClick={() => onRespond(offer.id, 'reject')}>
             Reject
-          </button>
+          </Button>
         </div>
       )}
 
@@ -354,23 +339,17 @@ function OfferCard({ offer, onRespond }) {
             value={counterAmount}
             onChange={(e) => setCounterAmount(e.target.value)}
             placeholder="Your counter amount"
-            className="flex-1 border border-bordercol rounded-ctl px-3 py-1.5 text-sm"
+            className="flex-1 min-w-0 border border-bordercol rounded-ctl px-3 py-1.5 text-sm bg-white"
           />
-          <button
-            onClick={handleCounterSubmit}
-            className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-accent text-white"
-          >
+          <Button size="sm" onClick={handleCounterSubmit}>
             Send
-          </button>
-          <button
-            onClick={() => setShowCounter(false)}
-            className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-bordercol"
-          >
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setShowCounter(false)}>
             Cancel
-          </button>
+          </Button>
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 

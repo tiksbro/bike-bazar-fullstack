@@ -7,7 +7,9 @@ import HealthScoreGauge from '../components/HealthScoreGauge'
 import HealthScoreBreakdown from '../components/HealthScoreBreakdown'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import MakeOfferModal from '../components/MakeOfferModal'
-import { PriceBadge } from '../components/Badge'
+import Badge, { PriceBadge } from '../components/Badge'
+import Button from '../components/Button'
+import Card from '../components/Card'
 
 const artBackgrounds = {
   orange: 'linear-gradient(160deg,#FDECE0,#F6C79B)',
@@ -15,7 +17,6 @@ const artBackgrounds = {
   graphite: 'linear-gradient(160deg,#EDEEF0,#C7CACF)',
   teal: 'linear-gradient(160deg,#E1F4EE,#A9DCCB)',
 }
-
 
 function VehicleDetail() {
   const { slug } = useParams()
@@ -37,12 +38,12 @@ function VehicleDetail() {
         setVehicle(data)
         setSellerContact(null)
         setSellerRating(null)
-        
+
         if (data) {
           const [similarData, contactData, ratingData] = await Promise.all([
             getSimilar(data),
             getUserContact(data.owner),
-            getUserRatings(data.owner)
+            getUserRatings(data.owner),
           ])
           setSimilar(similarData)
           setSellerContact(contactData)
@@ -71,13 +72,8 @@ function VehicleDetail() {
     return (
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
         <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
-        <div>
-          <button
-            onClick={() => setRetryCount((c) => c + 1)}
-            className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
-          >
-            Try Again
-          </button>
+        <div className="mt-6">
+          <Button onClick={() => setRetryCount((c) => c + 1)}>Try Again</Button>
         </div>
       </div>
     )
@@ -88,9 +84,9 @@ function VehicleDetail() {
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
         <h1 className="font-display font-bold text-2xl">Vehicle Not Found</h1>
         <p className="text-textmuted mt-2">This listing may have been removed or the link is incorrect.</p>
-        <Link to="/vehicles" className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3">
+        <Button to="/vehicles" className="mt-6">
           Browse Other Vehicles
-        </Link>
+        </Button>
       </div>
     )
   }
@@ -102,8 +98,11 @@ function VehicleDetail() {
       <Link to="/vehicles" className="text-sm text-accent font-semibold hover:underline">← Back to results</Link>
 
       <div className="grid md:grid-cols-2 gap-8 mt-4">
-        <div className="relative rounded-card overflow-hidden h-[340px]" style={{ background: artBackgrounds[vehicle.artColor] }}>
-                    <VehicleArt type={vehicle.type} color={vehicle.artColor} />
+        <div
+          className="relative rounded-card overflow-hidden shadow-card h-[260px] md:h-[340px]"
+          style={{ background: artBackgrounds[vehicle.artColor] }}
+        >
+          <VehicleArt type={vehicle.type} color={vehicle.artColor} />
         </div>
 
         <div>
@@ -127,46 +126,42 @@ function VehicleDetail() {
             </span>
           </p>
 
-          <div className="flex items-center gap-3 mt-3">
+          <div className="flex flex-wrap items-center gap-2 mt-3">
             {vehicle.verifiedSeller && (
-              <span className="flex items-center gap-1.5">
-                <span className="w-4 h-4 rounded-full bg-successbg flex items-center justify-center shrink-0">
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#12805C" strokeWidth="3">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
-                </span>
-                <span className="text-xs font-semibold text-success">Verified Seller</span>
-              </span>
+              <Badge variant="success">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                Verified Seller
+              </Badge>
             )}
-                       <PriceBadge insight={vehicle.priceInsight} />
+            <PriceBadge insight={vehicle.priceInsight} />
           </div>
 
           <div className="flex gap-3 mt-6">
-            <button
-              onClick={() => setOfferModalOpen(true)}
-              className="bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-6 py-3"
-            >
+            <Button className="flex-1 sm:flex-none" onClick={() => setOfferModalOpen(true)}>
               Make an Offer
-            </button>
+            </Button>
             {sellerContact ? (
-              <a
+              <Button
+                variant="secondary"
+                className="flex-1 sm:flex-none"
                 href={`mailto:${sellerContact.email}?subject=${encodeURIComponent(
                   `Interested in your ${vehicle.brand} ${vehicle.model} listing on Bike Bazar`
                 )}`}
-                className="border border-bordercol font-semibold text-sm rounded-btn px-6 py-3"
               >
                 Contact Seller
-              </a>
+              </Button>
             ) : (
-              <button disabled className="border border-bordercol font-semibold text-sm rounded-btn px-6 py-3 opacity-40 cursor-not-allowed">
+              <Button variant="secondary" className="flex-1 sm:flex-none" disabled>
                 Contact Seller
-              </button>
+              </Button>
             )}
           </div>
 
-          <div className="mt-8 border border-bordercol rounded-card p-4">
+          <Card padding="sm" className="mt-8">
             <p className="text-xs font-bold uppercase tracking-wide text-textfaint">Seller</p>
-                        <p className="font-semibold mt-1">
+            <p className="font-semibold mt-1">
               {vehicle.verifiedSeller ? 'Verified Individual Seller' : 'Unverified Seller'}
             </p>
             <p className="text-sm text-textmuted mt-0.5">{vehicle.location}</p>
@@ -178,14 +173,14 @@ function VehicleDetail() {
                 </span>
               </p>
             )}
-          </div>
+          </Card>
           <ReportListingBox vehicleId={vehicle.id} />
         </div>
       </div>
 
       <div className="mt-10">
         <h2 className="font-display font-bold text-xl">Bike Health Score</h2>
-        <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start border border-bordercol rounded-card p-5 mt-4">
+        <Card className="flex flex-col sm:flex-row gap-6 items-center sm:items-start mt-4">
           <HealthScoreGauge score={healthScore.overall} />
           <HealthScoreBreakdown items={[
             { label: 'Engine', score: healthScore.engine },
@@ -194,13 +189,11 @@ function VehicleDetail() {
             { label: 'Electrical', score: healthScore.electrical },
             { label: 'Documents', score: healthScore.documents },
           ]} />
-        </div>
+        </Card>
         <p className="text-xs text-textfaint mt-2">
           This is a platform estimate based on listing details, not a professional mechanical inspection.
         </p>
       </div>
-
-
 
       <div className="mt-10">
         <h2 className="font-display font-bold text-xl">Specifications</h2>
@@ -227,10 +220,11 @@ function VehicleDetail() {
         </div>
       )}
 
-     {offerModalOpen && <MakeOfferModal vehicle={vehicle} onClose={() => setOfferModalOpen(false)} />}
+      {offerModalOpen && <MakeOfferModal vehicle={vehicle} onClose={() => setOfferModalOpen(false)} />}
     </div>
   )
 }
+
 function ReportListingBox({ vehicleId }) {
   const [open, setOpen] = useState(false)
   const [reason, setReason] = useState('')
@@ -282,12 +276,12 @@ function ReportListingBox({ vehicleId }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-4 border border-bordercol rounded-cardsm p-4">
+    <Card as="form" padding="sm" onSubmit={handleSubmit} className="mt-4">
       <label className="text-sm font-semibold block mb-1.5">Why are you reporting this listing?</label>
       <select
         value={reason}
         onChange={(e) => setReason(e.target.value)}
-        className="w-full border border-bordercol rounded-ctl px-3 py-2 text-sm"
+        className="w-full border border-bordercol rounded-ctl px-3 py-2 text-sm bg-white"
       >
         <option value="">Select a reason</option>
         <option value="fake">Fake listing</option>
@@ -301,31 +295,23 @@ function ReportListingBox({ vehicleId }) {
       {error && <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-2">{error}</p>}
 
       <div className="flex gap-2 mt-3">
-        <button
-          type="submit"
-          disabled={!reason || submitting}
-          className="bg-ink text-white text-sm font-semibold px-4 py-2 rounded-btn disabled:opacity-40"
-        >
+        <Button type="submit" variant="dark" size="sm" disabled={!reason} loading={submitting}>
           {submitting ? 'Submitting...' : 'Submit Report'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setOpen(false)}
-          className="text-sm font-semibold px-4 py-2 rounded-btn border border-bordercol"
-        >
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
           Cancel
-        </button>
+        </Button>
       </div>
-    </form>
+    </Card>
   )
 }
 
 function Spec({ label, value }) {
   return (
-    <div className="border border-bordercol rounded-cardsm p-3">
+    <Card padding="sm">
       <p className="text-xs text-textfaint">{label}</p>
       <p className="font-semibold text-sm mt-0.5">{value}</p>
-    </div>
+    </Card>
   )
 }
 

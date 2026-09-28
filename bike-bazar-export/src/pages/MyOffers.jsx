@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useAuth } from '../context/AuthContext'
+import Badge from '../components/Badge'
+import Button from '../components/Button'
+import Card from '../components/Card'
+import EmptyState from '../components/EmptyState'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
-const statusBadge = {
-  pending: { label: 'Pending', color: 'text-warning', bg: 'bg-warningbg' },
-  accepted: { label: 'Accepted', color: 'text-success', bg: 'bg-successbg' },
-  rejected: { label: 'Rejected', color: 'text-neutralbadge', bg: 'bg-neutralbadgebg' },
-  countered: { label: 'Countered', color: 'text-accent', bg: 'bg-accentsoftbg' },
+const offerStatus = {
+  pending: { label: 'Pending', variant: 'warning' },
+  accepted: { label: 'Accepted', variant: 'success' },
+  rejected: { label: 'Rejected', variant: 'neutral' },
+  countered: { label: 'Countered', variant: 'info' },
 }
 
 function MyOffers() {
@@ -17,6 +21,7 @@ function MyOffers() {
   const [offers, setOffers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [retryCount, setRetryCount] = useState(0)
 
   function getToken() {
     return localStorage.getItem('bikebazar_token')
@@ -43,12 +48,17 @@ function MyOffers() {
       }
     }
     loadOffers()
-  }, [user])
+  }, [user, retryCount])
 
   if (!user) {
     return (
-      <div className="max-w-[500px] mx-auto px-4 sm:px-6 py-24 text-center">
-        <h1 className="font-display font-bold text-2xl">Log In to View Your Offers</h1>
+      <div className="max-w-[560px] mx-auto px-4 sm:px-6 py-16">
+        <EmptyState
+          title="Log in to see your offers"
+          message="Your offers and the seller's replies show up here."
+          actionLabel="Log In"
+          actionTo="/login"
+        />
       </div>
     )
   }
@@ -59,9 +69,21 @@ function MyOffers() {
       {loading ? (
         <p className="text-textmuted text-sm mt-4">Loading your offers...</p>
       ) : error ? (
-        <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-4 inline-block">{error}</p>
+        <Card padding="lg" className="mt-6 text-center">
+          <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
+          <div className="mt-4">
+            <Button onClick={() => setRetryCount((c) => c + 1)}>Try Again</Button>
+          </div>
+        </Card>
       ) : offers.length === 0 ? (
-        <p className="text-textmuted text-sm mt-4">You haven't made any offers yet.</p>
+        <div className="mt-6">
+          <EmptyState
+            title="You haven't made any offers yet"
+            message="Found a bike you like? Open it and tap Make an Offer."
+            actionLabel="Browse Vehicles"
+            actionTo="/vehicles"
+          />
+        </div>
       ) : (
         <div className="flex flex-col gap-3 mt-4">
           {offers.map((offer) => (
@@ -75,13 +97,14 @@ function MyOffers() {
 
 function MyOfferCard({ offer }) {
   const [rated, setRated] = useState(false)
+  const [alreadyRated, setAlreadyRated] = useState(false)
   const [showRateForm, setShowRateForm] = useState(false)
   const [stars, setStars] = useState(5)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  const s = statusBadge[offer.status]
+  const s = offerStatus[offer.status]
 
   async function handleRate(e) {
     e.preventDefault()
@@ -99,14 +122,21 @@ function MyOfferCard({ offer }) {
       setRated(true)
       setShowRateForm(false)
     } catch (err) {
-      setError(err.message)
+      // The server already has a rating for this deal (for example from an
+      // earlier visit) — say so kindly instead of showing an error.
+      if (/already rated/i.test(err.message)) {
+        setAlreadyRated(true)
+        setShowRateForm(false)
+      } else {
+        setError(err.message)
+      }
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="border border-bordercol rounded-card p-4">
+    <Card padding="sm">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="font-display font-semibold">
@@ -119,30 +149,29 @@ function MyOfferCard({ offer }) {
             </p>
           )}
         </div>
-        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-badge shrink-0 ${s.color} ${s.bg}`}>
+        <Badge variant={s.variant} dot>
           {s.label}
-        </span>
+        </Badge>
       </div>
 
-      {offer.status === 'accepted' && !rated && (
+      {offer.status === 'accepted' && !rated && !alreadyRated && (
         <div className="mt-3">
           {!showRateForm ? (
-            <button
-              onClick={() => setShowRateForm(true)}
-              className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-accent text-white"
-            >
+            <Button size="sm" onClick={() => setShowRateForm(true)}>
               Rate This Seller
-            </button>
+            </Button>
           ) : (
             <form onSubmit={handleRate} className="border border-bordercol rounded-cardsm p-3 mt-2">
-              <label className="text-sm font-semibold block mb-1.5">Rating</label>
+              <p className="text-sm font-semibold mb-1.5">Rating</p>
               <div className="flex gap-1">
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button
                     key={n}
                     type="button"
                     onClick={() => setStars(n)}
-                    className={`text-2xl ${n <= stars ? 'text-warning' : 'text-bordercol'}`}
+                    aria-label={`${n} star${n > 1 ? 's' : ''}`}
+                    aria-pressed={n <= stars}
+                    className={`text-2xl leading-none p-1 ${n <= stars ? 'text-featured' : 'text-bordercol'}`}
                   >
                     ★
                   </button>
@@ -152,32 +181,25 @@ function MyOfferCard({ offer }) {
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Optional comment about the seller..."
-                className="w-full border border-bordercol rounded-ctl px-3 py-2 text-sm mt-2"
+                className="w-full border border-bordercol rounded-ctl px-3 py-2 text-sm mt-2 bg-white"
                 rows={2}
               />
               {error && <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-2">{error}</p>}
               <div className="flex gap-2 mt-2">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-accent text-white disabled:opacity-50"
-                >
+                <Button type="submit" size="sm" loading={submitting}>
                   {submitting ? 'Submitting...' : 'Submit Rating'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowRateForm(false)}
-                  className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-bordercol"
-                >
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setShowRateForm(false)}>
                   Cancel
-                </button>
+                </Button>
               </div>
             </form>
           )}
         </div>
       )}
       {rated && <p className="text-sm text-success font-semibold mt-3">✓ Thanks for rating this seller!</p>}
-    </div>
+      {alreadyRated && <p className="text-sm text-textmuted mt-3">✓ You've already rated this seller.</p>}
+    </Card>
   )
 }
 

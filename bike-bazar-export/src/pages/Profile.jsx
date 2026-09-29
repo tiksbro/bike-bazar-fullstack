@@ -1,6 +1,8 @@
-import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
+import Button from '../components/Button'
+import Card from '../components/Card'
+import Badge from '../components/Badge'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -32,60 +34,63 @@ function Profile() {
     return (
       <div className="max-w-[500px] mx-auto px-4 sm:px-6 py-24 text-center">
         <h1 className="font-display font-bold text-2xl">You're not logged in</h1>
-        <Link
-          to="/login"
-          className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
-        >
+        <Button to="/login" className="mt-6">
           Log In
-        </Link>
+        </Button>
       </div>
     )
   }
 
+  const isDealer = user.role === 'dealer'
+  const isPro = user.subscriptionTier === 'pro'
+  const initial = user.name ? user.name.trim().charAt(0).toUpperCase() : '?'
+
   return (
     <div className="max-w-[500px] mx-auto px-4 sm:px-6 py-16">
       <h1 className="font-display font-bold text-[26px]">Your Profile</h1>
-      <div className="border border-bordercol rounded-card p-5 mt-6">
-        <p className="font-semibold">{user.name}</p>
-        <p className="text-sm text-textmuted mt-0.5">{user.email}</p>
-        {user.role === 'dealer' && (
-          <div className="mt-3 pt-3 border-t border-bordersoft">
-            <p className="text-sm text-textmuted">{user.businessName} · {user.city}</p>
-            <span
-              className={`inline-block mt-2 text-[11px] font-bold px-2 py-0.5 rounded-badge ${
-                user.subscriptionTier === 'pro' ? 'text-accent bg-accentsoftbg' : 'text-textmuted bg-sunken'
-              }`}
-            >
-              {user.subscriptionTier === 'pro' ? 'Pro Dealer' : 'Free Dealer'}
-            </span>
+
+      <Card className="mt-6">
+        <div className="flex items-center gap-3.5">
+          <div
+            aria-hidden="true"
+            className="w-12 h-12 rounded-full bg-accent text-white flex items-center justify-center font-display font-bold text-lg shrink-0"
+          >
+            {initial}
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold truncate">{user.name}</p>
+            <p className="text-sm text-textmuted truncate">{user.email}</p>
+          </div>
+        </div>
+
+        {isDealer && (
+          <div className="mt-4 pt-4 border-t border-bordersoft">
+            <p className="text-sm text-textmuted">
+              {user.businessName} · {user.city}
+            </p>
+            <div className="mt-2">
+              <Badge variant={isPro ? 'info' : 'neutral'} dot>
+                {isPro ? 'Pro Dealer' : 'Free Dealer'}
+              </Badge>
+            </div>
           </div>
         )}
-      </div>
+      </Card>
 
       <div className="flex gap-3 mt-4">
-        <Link
-          to="/dashboard"
-          className="flex-1 text-center bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
-        >
+        <Button to="/dashboard" className="flex-1">
           Go to Dashboard
-        </Link>
-        <Link
-          to="/sell"
-          className="flex-1 text-center border border-bordercol font-semibold text-sm rounded-btn px-5 py-3"
-        >
+        </Button>
+        <Button to="/sell" variant="secondary" className="flex-1">
           Add a Vehicle
-        </Link>
+        </Button>
       </div>
 
-      {user.role === 'dealer' && user.subscriptionTier !== 'pro' && (
+      {isDealer && !isPro && (
         <div className="mt-4">
-          <button
-            onClick={handleUpgrade}
-            disabled={upgrading}
-            className="w-full bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3 disabled:opacity-50"
-          >
+          <Button fullWidth loading={upgrading} onClick={handleUpgrade}>
             {upgrading ? 'Upgrading...' : 'Upgrade to Pro (unlimited listings)'}
-          </button>
+          </Button>
           <p className="text-xs text-textfaint mt-1.5 text-center">
             This is a mock upgrade for the prototype — no real payment is processed.
           </p>
@@ -95,9 +100,9 @@ function Profile() {
         </div>
       )}
 
-      <button onClick={logout} className="mt-4 text-sm font-semibold px-4 py-2 rounded-btn border border-bordercol">
+      <Button variant="danger" size="sm" onClick={logout} className="mt-4">
         Log Out
-      </button>
+      </Button>
     </div>
   )
 }

@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { getVehicleBySlug } from '../services/vehicleService'
 import { useAuth } from '../context/AuthContext'
+import Button from '../components/Button'
+import Card from '../components/Card'
+import Badge from '../components/Badge'
+import StatCard from '../components/StatCard'
+import EmptyState from '../components/EmptyState'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -78,7 +83,7 @@ function Admin() {
     }
     loadReports()
   }, [user])
-  
+
   useEffect(() => {
     async function loadAdminStats() {
       if (!user) return
@@ -91,6 +96,7 @@ function Admin() {
           setAdminStats(await res.json())
         }
       } catch {
+        // Silent — the stat cards just keep showing "—" if this fails.
       }
     }
     loadAdminStats()
@@ -131,13 +137,8 @@ function Admin() {
     return (
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
         <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
-        <div>
-          <button
-            onClick={() => setRetryCount((c) => c + 1)}
-            className="inline-flex mt-4 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
-          >
-            Try Again
-          </button>
+        <div className="mt-4">
+          <Button onClick={() => setRetryCount((c) => c + 1)}>Try Again</Button>
         </div>
       </div>
     )
@@ -147,26 +148,30 @@ function Admin() {
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="font-display font-bold text-[26px]">Admin Dashboard</h1>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
         <StatCard label="Users" value={adminStats ? adminStats.totalUsers.toLocaleString('en-IN') : '—'} />
         <StatCard label="Active Listings" value={adminStats ? adminStats.activeListings.toLocaleString('en-IN') : '—'} />
         <StatCard label="Dealers" value={adminStats ? adminStats.totalDealers.toLocaleString('en-IN') : '—'} />
-        <StatCard label="Pending Approvals" value={pendingCount} />
-        <StatCard label="Pending Reports" value={pendingReportsCount} />
+        <StatCard label="Pending Approvals" value={pendingCount} attention={pendingCount > 0} />
+        <StatCard label="Pending Reports" value={pendingReportsCount} attention={pendingReportsCount > 0} />
       </div>
 
       <div className="mt-10">
         <h2 className="font-display font-bold text-xl">Reported Listings</h2>
         {reportsForbidden ? (
-          <p className="text-sm text-textmuted mt-4">
-            Admin access required — this section is only visible to admin accounts.
-          </p>
+          <Card padding="sm" className="mt-4">
+            <p className="text-sm text-textmuted">
+              Admin access required — this section is only visible to admin accounts.
+            </p>
+          </Card>
         ) : reportsLoading ? (
           <p className="text-textmuted text-sm mt-4">Loading reports...</p>
         ) : reportsError ? (
           <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-4 inline-block">{reportsError}</p>
         ) : reports.length === 0 ? (
-          <p className="text-textmuted text-sm mt-4">No reports.</p>
+          <div className="mt-4">
+            <EmptyState title="No reports" message="Reported listings will show up here for review." />
+          </div>
         ) : (
           <div className="flex flex-col gap-3 mt-4">
             {reports.map((report) => (
@@ -184,9 +189,10 @@ function Admin() {
             if (!vehicle) return null
 
             return (
-              <div
+              <Card
                 key={p.slug}
-                className="border border-bordercol rounded-card p-4 flex flex-col sm:flex-row sm:items-center gap-4"
+                padding="sm"
+                className="flex flex-col sm:flex-row sm:items-center gap-4"
               >
                 <div className="flex-1">
                   <p className="font-display font-semibold">
@@ -199,29 +205,19 @@ function Admin() {
 
                 {p.status === 'pending' ? (
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => updateStatus(p.slug, 'approved')}
-                      className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-success text-white"
-                    >
+                    <Button size="sm" onClick={() => updateStatus(p.slug, 'approved')}>
                       Approve
-                    </button>
-                    <button
-                      onClick={() => updateStatus(p.slug, 'rejected')}
-                      className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-bordercol"
-                    >
+                    </Button>
+                    <Button variant="secondary" size="sm" onClick={() => updateStatus(p.slug, 'rejected')}>
                       Reject
-                    </button>
+                    </Button>
                   </div>
                 ) : (
-                  <span
-                    className={`text-[11px] font-bold px-2 py-0.5 rounded-badge ${
-                      p.status === 'approved' ? 'text-success bg-successbg' : 'text-danger bg-dangerbg'
-                    }`}
-                  >
+                  <Badge variant={p.status === 'approved' ? 'success' : 'danger'} dot>
                     {p.status === 'approved' ? 'Approved' : 'Rejected'}
-                  </span>
+                  </Badge>
                 )}
-              </div>
+              </Card>
             )
           })}
         </div>
@@ -230,24 +226,15 @@ function Admin() {
   )
 }
 
-function StatCard({ label, value }) {
-  return (
-    <div className="border border-bordercol rounded-card p-4">
-      <p className="text-xs text-textfaint">{label}</p>
-      <p className="font-display font-bold text-2xl mt-1">{value}</p>
-    </div>
-  )
+const reportStatusVariant = {
+  pending: 'warning',
+  reviewed: 'success',
+  dismissed: 'neutral',
 }
 
 function ReportCard({ report, onRespond }) {
-  const statusBadge = {
-    pending: { label: 'Pending', color: 'text-warning', bg: 'bg-warningbg' },
-    reviewed: { label: 'Reviewed', color: 'text-success', bg: 'bg-successbg' },
-    dismissed: { label: 'Dismissed', color: 'text-neutralbadge', bg: 'bg-neutralbadgebg' },
-  }[report.status]
-
   return (
-    <div className="border border-bordercol rounded-card p-4">
+    <Card padding="sm">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <p className="font-display font-semibold">
@@ -257,28 +244,22 @@ function ReportCard({ report, onRespond }) {
             Reported by {report.reporter.name} · {reasonLabels[report.reason]}
           </p>
         </div>
-        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-badge shrink-0 ${statusBadge.color} ${statusBadge.bg}`}>
-          {statusBadge.label}
-        </span>
+        <Badge variant={reportStatusVariant[report.status]} dot>
+          {report.status.charAt(0).toUpperCase() + report.status.slice(1)}
+        </Badge>
       </div>
 
       {report.status === 'pending' && (
         <div className="flex gap-2 mt-3">
-          <button
-            onClick={() => onRespond(report.id, 'reviewed')}
-            className="text-sm font-semibold px-3 py-1.5 rounded-btn bg-success text-white"
-          >
+          <Button size="sm" onClick={() => onRespond(report.id, 'reviewed')}>
             Mark Reviewed
-          </button>
-          <button
-            onClick={() => onRespond(report.id, 'dismissed')}
-            className="text-sm font-semibold px-3 py-1.5 rounded-btn border border-bordercol"
-          >
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => onRespond(report.id, 'dismissed')}>
             Dismiss
-          </button>
+          </Button>
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 

@@ -3,6 +3,9 @@ import { useParams, Link } from 'react-router-dom'
 import { getDealerById } from '../services/dealerService'
 import VehicleCard from '../components/VehicleCard'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import Button from '../components/Button'
+import Badge from '../components/Badge'
+import EmptyState from '../components/EmptyState'
 
 function DealerDetail() {
   const { id } = useParams()
@@ -41,13 +44,8 @@ function DealerDetail() {
     return (
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
         <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
-        <div>
-          <button
-            onClick={() => setRetryCount((c) => c + 1)}
-            className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
-          >
-            Try Again
-          </button>
+        <div className="mt-6">
+          <Button onClick={() => setRetryCount((c) => c + 1)}>Try Again</Button>
         </div>
       </div>
     )
@@ -57,9 +55,9 @@ function DealerDetail() {
     return (
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
         <h1 className="font-display font-bold text-2xl">Dealer Not Found</h1>
-        <Link to="/dealers" className="inline-flex mt-6 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3">
+        <Button to="/dealers" className="mt-6">
           Browse Dealers
-        </Link>
+        </Button>
       </div>
     )
   }
@@ -74,9 +72,12 @@ function DealerDetail() {
           <p className="text-textmuted mt-1">{dealer.city}</p>
         </div>
         {dealer.verified && (
-          <span className="text-[11px] font-bold px-2 py-0.5 rounded-badge text-success bg-successbg shrink-0">
-            ✓ Verified Dealer
-          </span>
+          <Badge variant="success" className="shrink-0">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M20 6L9 17l-5-5" />
+            </svg>
+            Verified Dealer
+          </Badge>
         )}
       </div>
 
@@ -92,7 +93,9 @@ function DealerDetail() {
 
       <h2 className="font-display font-bold text-xl mt-10">Available Vehicles</h2>
       {dealer.vehicles.length === 0 ? (
-        <p className="text-textmuted text-sm mt-4">This dealer has no active listings right now.</p>
+        <div className="mt-4">
+          <EmptyState title="No active listings right now" message="Check back soon — this dealer's inventory updates regularly." />
+        </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
           {dealer.vehicles.map((v) => (

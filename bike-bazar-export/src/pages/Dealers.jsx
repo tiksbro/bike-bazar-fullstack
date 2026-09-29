@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { listDealers } from '../services/dealerService'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
+import Button from '../components/Button'
+import Card from '../components/Card'
+import Badge from '../components/Badge'
+import EmptyState from '../components/EmptyState'
 
 function Dealers() {
   useDocumentTitle('Verified Dealers')
@@ -34,33 +38,33 @@ function Dealers() {
       {loading ? (
         <p className="text-textmuted text-sm mt-6">Loading dealers...</p>
       ) : error ? (
-        <div className="mt-6 text-center border border-bordercol rounded-card p-10">
+        <Card padding="lg" className="mt-6 text-center">
           <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
-          <div>
-            <button
-              onClick={() => setRetryCount((c) => c + 1)}
-              className="inline-flex mt-4 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
-            >
-              Try Again
-            </button>
+          <div className="mt-4">
+            <Button onClick={() => setRetryCount((c) => c + 1)}>Try Again</Button>
           </div>
-        </div>
+        </Card>
       ) : dealers.length === 0 ? (
-        <p className="text-textmuted text-sm mt-6">No dealers registered yet.</p>
+        <div className="mt-6">
+          <EmptyState title="No dealers registered yet" message="Verified showrooms will appear here once they join." />
+        </div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
           {dealers.map((dealer) => (
             <Link
               key={dealer.id}
               to={`/dealer/${dealer.id}`}
-              className="border border-bordercol rounded-card p-5 hover:border-borderstrong transition"
+              className="group bg-white border border-bordersoft rounded-card p-5 shadow-card transition duration-200 hover:shadow-cardhover hover:-translate-y-1 hover:border-bordercol"
             >
               <div className="flex items-start justify-between gap-2">
                 <p className="font-display font-bold text-lg">{dealer.businessName}</p>
                 {dealer.verified && (
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-badge text-success bg-successbg shrink-0">
-                    ✓ Verified
-                  </span>
+                  <Badge variant="success" className="shrink-0">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    Verified
+                  </Badge>
                 )}
               </div>
               <p className="text-sm text-textmuted mt-1">{dealer.city}</p>
@@ -74,6 +78,10 @@ function Dealers() {
                   ))}
                 </div>
               )}
+
+              <span className="mt-4 block w-full text-center bg-sunken group-hover:bg-accent text-ink group-hover:text-white text-sm font-semibold rounded-btn py-2 transition">
+                View Dealer
+              </span>
             </Link>
           ))}
         </div>

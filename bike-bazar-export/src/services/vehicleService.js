@@ -1,9 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
-// A shared helper: fetch EVERY vehicle, no filters. A few functions
-// below (getFeatured, getSimilar, getByIds) need to look across the
-// whole list rather than ask the backend for one narrow slice, so they
-// share this instead of repeating the same fetch logic three times.
 async function fetchAllVehicles() {
   const res = await fetch(`${API_URL}/vehicles`)
   if (!res.ok) throw new Error('Failed to fetch vehicles')
@@ -16,10 +12,7 @@ export async function getFeatured() {
 }
 
 export async function listVehicles(filters = {}) {
-  // URLSearchParams safely builds a query string like
-  // "?brand=Yamaha&sortBy=priceLowHigh" from whichever filters are
-  // actually set — handling spaces and special characters correctly,
-  // instead of us gluing strings together by hand.
+  
   const params = new URLSearchParams()
   if (filters.q) params.set('q', filters.q)
   if (filters.brand) params.set('brand', filters.brand)
@@ -48,6 +41,26 @@ export async function createVehicle(vehicleData,token) {
     throw new Error(data.error || 'Failed to create vehicle')
   }
   return data
+}
+
+// Sends the chosen photo files to our backend, which puts them on Cloudinary.
+// Returns a list like [{ url, publicId }, ...] that we then save with the listing.
+export async function uploadPhotos(files, token) {
+  // FormData is how browsers send files. We don't set 'Content-Type' ourselves:
+  // the browser adds the right one (multipart/form-data) automatically.
+  const formData = new FormData()
+  files.forEach((file) => formData.append('photos', file))
+
+  const res = await fetch(`${API_URL}/uploads`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: formData,
+  })
+  const data = await res.json()
+  if (!res.ok) {
+    throw new Error(data.error || 'Failed to upload photos')
+  }
+  return data.photos
 }
 
 export async function getVehicleBySlug(slug) {

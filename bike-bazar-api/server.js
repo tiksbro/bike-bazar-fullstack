@@ -14,6 +14,7 @@ const offersRouter = require('./routes/offers')
 const reportsRouter = require('./routes/reports')
 const ratingsRouter = require('./routes/ratings')
 const adminRouter = require('./routes/admin')
+const uploadsRouter = require('./routes/uploads')
 
 const app = express()
 const PORT = process.env.PORT || 4000
@@ -35,6 +36,7 @@ app.use('/api/offers', offersRouter)
 app.use('/api/reports', reportsRouter)
 app.use('/api/ratings', ratingsRouter)
 app.use('/api/admin', adminRouter)
+app.use('/api/uploads', uploadsRouter)
 
 mongoose.connection.on('error', (err) => {
   console.error(`[${new Date().toISOString()}] MongoDB connection error:`, err.message)

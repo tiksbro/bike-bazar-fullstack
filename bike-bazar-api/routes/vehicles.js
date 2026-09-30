@@ -2,6 +2,7 @@ const express = require('express')
 const Vehicle = require('../models/Vehicle')
 const User = require('../models/User')
 const requireAuth = require('../middleware/requireAuth')
+const { deletePhotosFromCloudinary } = require('./uploads')
 const { computePriceInsight, buildPriceInsightGroups, applyPriceInsight } = require('../utils/priceInsight')
 
 const router = express.Router()
@@ -9,6 +10,26 @@ const router = express.Router()
 const ART_COLORS = ['orange', 'blue', 'graphite', 'teal']
 const REQUIRED_FIELDS = ['brand', 'model', 'year', 'type', 'mileageKm', 'engineCc', 'price', 'location', 'fuelType']
 const FREE_DEALER_LISTING_LIMIT = 5
+const MIN_PHOTOS = 1
+const MAX_PHOTOS = 6
+
+// Checks the photos sent with a new listing. Returns a clean list, or null if they are not valid.
+// Each photo must be one we uploaded to Cloudinary through POST /api/uploads.
+function getValidPhotos(photos) {
+  if (!Array.isArray(photos) || photos.length < MIN_PHOTOS || photos.length > MAX_PHOTOS) return null
+
+  const allPhotosValid = photos.every(
+    (photo) =>
+      photo &&
+      typeof photo.url === 'string' &&
+      photo.url.startsWith('https://res.cloudinary.com/') &&
+      typeof photo.publicId === 'string' &&
+      photo.publicId.startsWith('bike-bazar/')
+  )
+  if (!allPhotosValid) return null
+
+  return photos.map((photo) => ({ url: photo.url, publicId: photo.publicId }))
+}
 
 function slugify(text) {
   return text
@@ -131,13 +152,18 @@ router.get('/:slug', async (req, res) => {
 // POST /api/vehicles
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { brand, model, year, type, mileageKm, engineCc, price, negotiable, location, fuelType, description } = req.body
+    const { brand, model, year, type, mileageKm, engineCc, price, negotiable, location, fuelType, description, photos } = req.body
 
     const missing = REQUIRED_FIELDS.filter(
       (field) => req.body[field] === undefined || req.body[field] === null || req.body[field] === ''
     )
     if (missing.length > 0) {
       return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` })
+    }
+
+    const validPhotos = getValidPhotos(photos)
+    if (!validPhotos) {
+      return res.status(400).json({ error: `Please add ${MIN_PHOTOS} to ${MAX_PHOTOS} photos of your vehicle.` })
     }
 
     const user = await User.findById(req.userId)
@@ -170,6 +196,7 @@ router.post('/', requireAuth, async (req, res) => {
       verifiedSeller: false,
       priceInsight: 'fair',
       artColor,
+      photos: validPhotos,
       owner: req.userId,
     })
 
@@ -245,6 +272,8 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     await vehicle.deleteOne()
+    // also remove this listing's photos from Cloudinary (old listings have none, so nothing happens)
+    await deletePhotosFromCloudinary(vehicle.photos)
     res.status(200).json({ message: 'Vehicle deleted' })
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete vehicle', details: err.message })

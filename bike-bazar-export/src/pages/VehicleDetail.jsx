@@ -103,9 +103,7 @@ function VehicleDetail() {
     : null
 
   return (
-    // Extra bottom padding on phones (pb-28) so the sticky action bar
-    // never covers the last bit of the page.
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-28 md:pb-8">
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <Link to="/vehicles" className="text-sm text-accent font-semibold hover:underline">← Back to results</Link>
 
       <div className="grid md:grid-cols-2 gap-8 mt-4">
@@ -239,6 +237,8 @@ function VehicleDetail() {
 // Phone-only bar pinned to the bottom of the screen, so "Make Offer" and
 // "Contact" are always one tap away while you scroll the specs.
 // It sits just above the bottom menu (bottom-16 = 64px, the menu's height).
+// The extra bottom padding (pb-5) keeps the buttons clear of the round
+// "Sell" button, which pokes up out of the bottom menu.
 // If the Compare bar is showing, it moves up again so the two don't overlap.
 function MobileActionBar({ vehicle, contactHref, onMakeOffer }) {
   const { compareIds } = useCompare()
@@ -246,7 +246,8 @@ function MobileActionBar({ vehicle, contactHref, onMakeOffer }) {
 
   return (
     <div
-      className={`md:hidden fixed left-0 right-0 z-30 bg-white border-t border-bordercol shadow-pop px-4 py-3 ${
+      data-sticky-action-bar
+      className={`md:hidden fixed left-0 right-0 z-30 bg-white border-t border-bordercol shadow-pop px-4 pt-3 pb-5 ${
         compareBarShowing ? 'bottom-[124px]' : 'bottom-16'
       }`}
     >

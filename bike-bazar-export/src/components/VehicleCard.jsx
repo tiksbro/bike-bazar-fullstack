@@ -3,6 +3,7 @@ import { useFavorites } from '../context/FavoritesContext'
 import { useCompare } from '../context/CompareContext'
 import Badge, { PriceBadge } from './Badge'
 import VehicleArt from './VehicleArt'
+import VehiclePhoto from './VehiclePhoto'
 
 // VehicleDetail.jsx imports VehicleArt from this file, so keep it available here.
 export { VehicleArt }
@@ -65,6 +66,8 @@ function VehicleCard({ vehicle, variant = 'result' }) {
   const favorited = isFavorite(vehicle.id)
   const comparing = isComparing(vehicle.id)
   const isCompactOnPhone = variant === 'result'
+  // The first photo is the cover. `?.` keeps this safe if photos is missing.
+  const coverPhoto = vehicle.photos?.[0]
 
   return (
     <Link
@@ -78,7 +81,17 @@ function VehicleCard({ vehicle, variant = 'result' }) {
         className={`relative ${isCompactOnPhone ? 'h-[170px] sm:h-[200px]' : 'h-[200px]'}`}
         style={{ background: artBackgrounds[vehicle.artColor] }}
       >
-        <VehicleArt type={vehicle.type} color={vehicle.artColor} />
+        {/* New listings have photos; old ones don't, so they keep the bike drawing. */}
+        {coverPhoto ? (
+          <VehiclePhoto
+            photo={coverPhoto}
+            width={600}
+            alt={`${vehicle.brand} ${vehicle.model}`}
+            className="absolute inset-0"
+          />
+        ) : (
+          <VehicleArt type={vehicle.type} color={vehicle.artColor} />
+        )}
 
         <div className="absolute top-3 left-3 flex flex-col items-start gap-1.5">
           {variant === 'featured' && (

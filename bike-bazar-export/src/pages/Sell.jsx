@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { citiesByProvince } from '../data/cities'
-import { createVehicle } from '../services/vehicleService'
+import { createVehicle, uploadPhotos } from '../services/vehicleService'
 import { useAuth } from '../context/AuthContext'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import Button from '../components/Button'
@@ -8,8 +8,8 @@ import Card from '../components/Card'
 import Badge from '../components/Badge'
 import VehicleArt from '../components/VehicleArt'
 
-// The 4 steps of the form, in order.
-const steps = ['Vehicle Info', 'Price & Condition', 'Location', 'Review']
+// The 5 steps of the form, in order.
+const steps = ['Vehicle Info', 'Price & Condition', 'Location', 'Photos', 'Review']
 
 const currentYear = new Date().getFullYear()
 
@@ -29,6 +29,12 @@ const emptyForm = {
 
 const DESCRIPTION_LIMIT = 500
 
+// Photo rules. These match the backend (bike-bazar-api/routes/uploads.js),
+// so the person sees the problem right away instead of after pressing Publish.
+const MAX_PHOTOS = 6
+const MAX_PHOTO_SIZE_MB = 5
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
 // Shared look for every text box / dropdown on this page.
 // hasError turns the border red so the person can see which box is wrong.
 // text-base (16px) on phones: if the text is smaller than 16px, iPhones
@@ -46,7 +52,7 @@ function formatPrice(value) {
 
 // Checks ONE step and returns an object of error messages.
 // An empty object {} means the step is fine.
-function validateStep(stepNumber, form) {
+function validateStep(stepNumber, form, photos) {
   const errors = {}
 
   if (stepNumber === 1) {
@@ -71,6 +77,10 @@ function validateStep(stepNumber, form) {
     if (!form.location) errors.location = 'Pick the city where the vehicle is.'
   }
 
+  if (stepNumber === 4) {
+    if (photos.length === 0) errors.photos = 'Add at least 1 photo of your vehicle.'
+  }
+
   return errors
 }
 
@@ -85,6 +95,11 @@ function Sell() {
   const [published, setPublished] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
+  // photos = the pictures the person picked, still on their device.
+  // Each one is { id, file, previewUrl }. photos[0] is the cover photo.
+  const [photos, setPhotos] = useState([])
+  // 'Uploading photos...' or 'Publishing...' while the Publish button is busy.
+  const [submitLabel, setSubmitLabel] = useState('')
 
   function updateField(field, value) {
     setFormData({ ...formData, [field]: value })
@@ -95,8 +110,50 @@ function Sell() {
     }
   }
 
+  // Adds newly picked files, after checking type, size and the 6-photo limit.
+  function addPhotos(fileList) {
+    const files = Array.from(fileList)
+    const goodPhotos = []
+    let problem = ''
+
+    for (const file of files) {
+      if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+        problem = `"${file.name}" is not a JPG, PNG or WebP photo.`
+      } else if (file.size > MAX_PHOTO_SIZE_MB * 1024 * 1024) {
+        problem = `"${file.name}" is bigger than ${MAX_PHOTO_SIZE_MB} MB.`
+      } else if (photos.length + goodPhotos.length >= MAX_PHOTOS) {
+        problem = `You can add at most ${MAX_PHOTOS} photos.`
+      } else {
+        goodPhotos.push({
+          id: `${file.name}-${file.size}-${Date.now()}-${Math.random()}`,
+          file,
+          // A temporary link to the file on this device, so we can show it before uploading.
+          previewUrl: URL.createObjectURL(file),
+        })
+      }
+    }
+
+    setPhotos([...photos, ...goodPhotos])
+
+    // Show the problem (if any). Otherwise clear the old photos error.
+    const { photos: _removed, ...otherErrors } = errors
+    setErrors(problem ? { ...otherErrors, photos: problem } : otherErrors)
+  }
+
+  function removePhoto(photoId) {
+    const photo = photos.find((p) => p.id === photoId)
+    if (photo) URL.revokeObjectURL(photo.previewUrl) // free the memory used by the preview
+    setPhotos(photos.filter((p) => p.id !== photoId))
+  }
+
+  // Moves one photo to the front of the list, which makes it the cover.
+  function makeCover(photoId) {
+    const photo = photos.find((p) => p.id === photoId)
+    setPhotos([photo, ...photos.filter((p) => p.id !== photoId)])
+  }
+
   function goNext() {
-    const stepErrors = validateStep(step, formData)
+    const stepErrors = validateStep(step, formData, photos)
     setErrors(stepErrors)
     const errorFields = Object.keys(stepErrors)
     if (errorFields.length > 0) {
@@ -126,12 +183,23 @@ function Sell() {
     setSubmitting(true)
     try {
       const token = localStorage.getItem('bikebazar_token')
+
+      // 1. Send the photos first. The backend puts them on Cloudinary and gives back their links.
+      setSubmitLabel('Uploading photos...')
+      const uploadedPhotos = await uploadPhotos(
+        photos.map((photo) => photo.file),
+        token
+      )
+
+      // 2. Then create the listing, with those photo links inside it.
+      setSubmitLabel('Publishing...')
       await createVehicle(
         {
           ...formData,
           brand: formData.brand.trim(),
           model: formData.model.trim(),
           description: formData.description.trim(),
+          photos: uploadedPhotos,
         },
         token
       )
@@ -140,10 +208,13 @@ function Sell() {
       setSubmitError(err.message)
     } finally {
       setSubmitting(false)
+      setSubmitLabel('')
     }
   }
 
   function startNewListing() {
+    photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
+    setPhotos([])
     setFormData(emptyForm)
     setErrors({})
     setStep(1)
@@ -199,7 +270,7 @@ function Sell() {
   return (
     <div className="max-w-[1080px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
       <h1 className="font-display font-bold text-[26px] sm:text-[30px]">Sell Your Vehicle</h1>
-      <p className="text-textmuted text-sm mt-1">Free to list. Fill in 4 short steps and your vehicle goes live.</p>
+      <p className="text-textmuted text-sm mt-1">Free to list. Fill in {steps.length} short steps and your vehicle goes live.</p>
 
       <Stepper step={step} onStepClick={goToStep} />
 
@@ -208,7 +279,16 @@ function Sell() {
           {step === 1 && <VehicleInfoStep formData={formData} errors={errors} updateField={updateField} />}
           {step === 2 && <PriceStep formData={formData} errors={errors} updateField={updateField} />}
           {step === 3 && <LocationStep formData={formData} errors={errors} updateField={updateField} />}
-          {step === 4 && <ReviewStep formData={formData} onEdit={goToStep} />}
+          {step === 4 && (
+            <PhotosStep
+              photos={photos}
+              error={errors.photos}
+              onAdd={addPhotos}
+              onRemove={removePhoto}
+              onMakeCover={makeCover}
+            />
+          )}
+          {step === 5 && <ReviewStep formData={formData} photos={photos} onEdit={goToStep} />}
 
           {submitError && (
             <div role="alert" className="mt-6 text-sm text-danger bg-dangerbg rounded-ctl px-4 py-3">
@@ -224,7 +304,7 @@ function Sell() {
             </Button>
             {isLastStep ? (
               <Button onClick={handlePublish} loading={submitting} className="flex-1 sm:flex-none">
-                {submitting ? 'Publishing...' : 'Publish Listing'}
+                {submitting ? submitLabel : 'Publish Listing'}
               </Button>
             ) : (
               <Button onClick={goNext} className="flex-1 sm:flex-none">
@@ -239,7 +319,7 @@ function Sell() {
         {!isLastStep && (
           <aside className="hidden lg:block sticky top-24">
             <p className="text-xs font-bold uppercase tracking-wide text-textfaint mb-2">Live preview</p>
-            <ListingPreview formData={formData} />
+            <ListingPreview formData={formData} coverUrl={photos[0]?.previewUrl} />
             <p className="text-xs text-textfaint mt-3">This is how buyers will see your listing.</p>
           </aside>
         )}
@@ -510,15 +590,137 @@ function LocationStep({ formData, errors, updateField }) {
 }
 
 // ---------- Step 4 ----------
-function ReviewStep({ formData, onEdit }) {
+function PhotosStep({ photos, error, onAdd, onRemove, onMakeCover }) {
+  const [isDragging, setIsDragging] = useState(false)
+  const canAddMore = photos.length < MAX_PHOTOS
+
+  function handleDrop(event) {
+    event.preventDefault() // stop the browser from opening the photo in a new tab
+    setIsDragging(false)
+    onAdd(event.dataTransfer.files)
+  }
+
+  return (
+    <div>
+      <StepHeading
+        title="Add photos"
+        subtitle={`Listings with clear photos get more buyers. Add 1 to ${MAX_PHOTOS} photos.`}
+      />
+
+      {canAddMore && (
+        // A <label> wrapped around a hidden file input: clicking anywhere on the box opens the file picker.
+        // On phones this also lets the person take a new photo with the camera.
+        <label
+          id="photos"
+          onDragOver={(event) => {
+            event.preventDefault()
+            setIsDragging(true)
+          }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+          className={`flex flex-col items-center justify-center text-center gap-2 rounded-cardsm border-2 border-dashed px-4 py-8 cursor-pointer transition ${
+            isDragging
+              ? 'border-accent bg-accentsoftbg'
+              : error
+                ? 'border-danger bg-dangerbg/40'
+                : 'border-bordercol bg-sunken/50 hover:border-accent hover:bg-accentsoftbg'
+          }`}
+        >
+          <input
+            type="file"
+            accept={ALLOWED_PHOTO_TYPES.join(',')}
+            multiple
+            className="sr-only"
+            onChange={(event) => {
+              onAdd(event.target.files)
+              event.target.value = '' // so picking the same photo again still works
+            }}
+          />
+          <span className="w-11 h-11 rounded-full bg-white text-accent shadow-card flex items-center justify-center">
+            <CameraIcon />
+          </span>
+          <span className="text-sm font-semibold">
+            <span className="text-accent">Choose photos</span>
+            <span className="hidden sm:inline"> or drag them here</span>
+          </span>
+          <span className="text-xs text-textfaint">
+            JPG, PNG or WebP · up to {MAX_PHOTO_SIZE_MB} MB each · {photos.length} of {MAX_PHOTOS} added
+          </span>
+        </label>
+      )}
+
+      {error && (
+        <p role="alert" className="text-xs text-danger mt-2">
+          {error}
+        </p>
+      )}
+
+      {photos.length > 0 && (
+        <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-5">
+          {photos.map((photo, index) => (
+            <li key={photo.id} className="relative rounded-cardsm overflow-hidden border border-bordercol bg-sunken">
+              <img src={photo.previewUrl} alt={`Photo ${index + 1}`} className="w-full aspect-[4/3] object-cover" />
+              {index === 0 && (
+                <Badge variant="featured" className="absolute top-2 left-2">
+                  Cover
+                </Badge>
+              )}
+              <button
+                type="button"
+                onClick={() => onRemove(photo.id)}
+                aria-label={`Remove photo ${index + 1}`}
+                className="absolute top-1.5 right-1.5 w-8 h-8 rounded-full bg-ink/70 text-white flex items-center justify-center hover:bg-ink transition"
+              >
+                <CloseIcon />
+              </button>
+              {index > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onMakeCover(photo.id)}
+                  className="absolute bottom-0 inset-x-0 bg-ink/60 text-white text-xs font-semibold py-2 hover:bg-ink/80 transition"
+                >
+                  Make cover
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {photos.length > 1 && (
+        <p className="text-xs text-textfaint mt-3">The cover photo is the one buyers see first in search results.</p>
+      )}
+    </div>
+  )
+}
+
+// ---------- Step 5 ----------
+function ReviewStep({ formData, photos, onEdit }) {
   return (
     <div>
       <StepHeading title="Check your listing" subtitle="Make sure everything is right before you publish." />
 
       <div className="grid md:grid-cols-[260px_1fr] gap-6 items-start">
-        <ListingPreview formData={formData} />
+        <ListingPreview formData={formData} coverUrl={photos[0]?.previewUrl} />
 
         <div className="flex flex-col gap-4">
+          <ReviewSection title="Photos" onEdit={() => onEdit(4)}>
+            <ReviewRow
+              label={`${photos.length} added`}
+              value={
+                <span className="flex flex-wrap justify-end gap-2">
+                  {photos.map((photo, index) => (
+                    <img
+                      key={photo.id}
+                      src={photo.previewUrl}
+                      alt={`Photo ${index + 1}`}
+                      className="w-14 h-14 rounded-ctl object-cover border border-bordercol"
+                    />
+                  ))}
+                </span>
+              }
+            />
+          </ReviewSection>
           <ReviewSection title="Vehicle Info" onEdit={() => onEdit(1)}>
             <ReviewRow label="Type" value={formData.type === 'scooter' ? 'Scooter' : 'Motorcycle'} />
             <ReviewRow label="Brand" value={formData.brand} />
@@ -572,7 +774,8 @@ function ReviewRow({ label, value }) {
 }
 
 // ---------- The card that shows how the listing will look ----------
-function ListingPreview({ formData }) {
+// coverUrl is the first photo's preview. Without a photo we show the bike drawing.
+function ListingPreview({ formData, coverUrl }) {
   const title = `${formData.brand} ${formData.model}`.trim() || 'Your vehicle'
   const details = [formData.year, formData.mileageKm !== '' ? `${formatPrice(formData.mileageKm)} KM` : '']
     .filter(Boolean)
@@ -581,7 +784,11 @@ function ListingPreview({ formData }) {
   return (
     <Card padding="none" className="overflow-hidden">
       <div className="relative h-40 bg-linear-to-br from-accentsoftbg to-sunken">
-        <VehicleArt type={formData.type} />
+        {coverUrl ? (
+          <img src={coverUrl} alt="Cover photo" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <VehicleArt type={formData.type} />
+        )}
         <Badge variant="info" className="absolute top-3 left-3">
           New listing
         </Badge>
@@ -642,6 +849,23 @@ function CheckIcon({ size = 16 }) {
       aria-hidden="true"
     >
       <path d="M20 6L9 17l-5-5" />
+    </svg>
+  )
+}
+
+function CameraIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
+      <path d="M18 6L6 18M6 6l12 12" />
     </svg>
   )
 }

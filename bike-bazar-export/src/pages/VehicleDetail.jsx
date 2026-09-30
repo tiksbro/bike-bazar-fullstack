@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import VehicleCard, { VehicleArt } from '../components/VehicleCard'
+import VehiclePhoto from '../components/VehiclePhoto'
 import { getVehicleBySlug, getSimilar, getHealthScore } from '../services/vehicleService'
 import { getUserContact, getUserRatings } from '../services/userService'
 import HealthScoreGauge from '../components/HealthScoreGauge'
@@ -107,12 +108,17 @@ function VehicleDetail() {
       <Link to="/vehicles" className="text-sm text-accent font-semibold hover:underline">← Back to results</Link>
 
       <div className="grid md:grid-cols-2 gap-8 mt-4">
-        <div
-          className="relative rounded-card overflow-hidden shadow-card h-[260px] md:h-[340px]"
-          style={{ background: artBackgrounds[vehicle.artColor] }}
-        >
-          <VehicleArt type={vehicle.type} color={vehicle.artColor} />
-        </div>
+        {/* New listings show their photos. Old listings have none, so they keep the bike drawing. */}
+        {vehicle.photos?.length > 0 ? (
+          <PhotoGallery photos={vehicle.photos} title={`${vehicle.brand} ${vehicle.model}`} />
+        ) : (
+          <div
+            className="relative rounded-card overflow-hidden shadow-card h-[260px] md:h-[340px]"
+            style={{ background: artBackgrounds[vehicle.artColor] }}
+          >
+            <VehicleArt type={vehicle.type} color={vehicle.artColor} />
+          </div>
+        )}
 
         <div>
           <h1 className="font-display font-bold text-[28px]">{vehicle.brand} {vehicle.model}</h1>
@@ -231,6 +237,106 @@ function VehicleDetail() {
 
       {offerModalOpen && <MakeOfferModal vehicle={vehicle} onClose={() => setOfferModalOpen(false)} />}
     </div>
+  )
+}
+
+// The listing's photos: one big photo at a time, plus small thumbnails under it.
+// The big photo row is a sideways-scrolling strip with "scroll snap", so on a
+// phone you can simply swipe left/right and it stops neatly on each photo.
+// On desktop the arrow buttons and thumbnails move the same strip.
+function PhotoGallery({ photos, title }) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const stripRef = useRef(null) // lets us talk to the scrolling strip directly
+  const hasManyPhotos = photos.length > 1
+
+  // Scrolls the strip so photo number `index` fills the frame.
+  function showPhoto(index) {
+    const strip = stripRef.current
+    strip.scrollTo({ left: index * strip.clientWidth, behavior: 'smooth' })
+    setCurrentIndex(index)
+  }
+
+  // When the person swipes, work out which photo is now in view.
+  function handleScroll() {
+    const strip = stripRef.current
+    const index = Math.round(strip.scrollLeft / strip.clientWidth)
+    if (index !== currentIndex) setCurrentIndex(index)
+  }
+
+  return (
+    <div>
+      <div className="relative rounded-card overflow-hidden shadow-card h-[260px] md:h-[340px] bg-sunken">
+        <div
+          ref={stripRef}
+          onScroll={handleScroll}
+          className="flex h-full overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {photos.map((photo, index) => (
+            <div key={photo.publicId} className="w-full h-full shrink-0 snap-center">
+              <VehiclePhoto
+                photo={photo}
+                width={1200}
+                alt={`${title}, photo ${index + 1} of ${photos.length}`}
+                eager={index === 0}
+              />
+            </div>
+          ))}
+        </div>
+
+        {hasManyPhotos && (
+          <>
+            <GalleryArrow direction="previous" disabled={currentIndex === 0} onClick={() => showPhoto(currentIndex - 1)} />
+            <GalleryArrow
+              direction="next"
+              disabled={currentIndex === photos.length - 1}
+              onClick={() => showPhoto(currentIndex + 1)}
+            />
+            <span className="absolute bottom-3 right-3 bg-ink/70 text-white text-xs font-semibold rounded-full px-2.5 py-1">
+              {currentIndex + 1} / {photos.length}
+            </span>
+          </>
+        )}
+      </div>
+
+      {hasManyPhotos && (
+        <div className="flex gap-2 mt-2.5 overflow-x-auto p-0.5 pb-1">
+          {photos.map((photo, index) => (
+            <button
+              key={photo.publicId}
+              type="button"
+              onClick={() => showPhoto(index)}
+              aria-label={`Show photo ${index + 1}`}
+              aria-current={index === currentIndex ? 'true' : undefined}
+              className={`shrink-0 w-16 h-12 sm:w-20 sm:h-14 rounded-ctl overflow-hidden ring-2 transition ${
+                index === currentIndex ? 'ring-accent' : 'ring-transparent opacity-70 hover:opacity-100'
+              }`}
+            >
+              <VehiclePhoto photo={photo} width={160} alt="" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// The round < and > buttons on the big photo. Hidden on phones, where you swipe instead.
+function GalleryArrow({ direction, disabled, onClick }) {
+  const isPrevious = direction === 'previous'
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={isPrevious ? 'Previous photo' : 'Next photo'}
+      className={`hidden md:flex absolute top-1/2 -translate-y-1/2 ${
+        isPrevious ? 'left-3' : 'right-3'
+      } w-10 h-10 rounded-full bg-white/90 shadow-card items-center justify-center text-ink hover:bg-white transition disabled:opacity-0 disabled:pointer-events-none`}
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={isPrevious ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'} />
+      </svg>
+    </button>
   )
 }
 

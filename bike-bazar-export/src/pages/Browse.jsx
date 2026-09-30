@@ -5,67 +5,154 @@ import { listVehicles } from '../services/vehicleService'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { citiesByProvince } from '../data/cities'
 import Button from '../components/Button'
+import Card from '../components/Card'
 import EmptyState from '../components/EmptyState'
 
 const brands = ['Yamaha', 'Honda', 'Bajaj', 'TVS', 'Royal Enfield', 'KTM', 'Hero', 'Suzuki', 'NIU', 'Yezdi']
 
+const typeLabels = { '': 'All', motorcycle: 'Motorcycle', scooter: 'Scooter' }
+
 const emptyFilters = { q: '', brand: '', type: '', location: '', minPrice: '', maxPrice: '', sortBy: '' }
+
+// Turns a price like 100000 into "Rs. 1 Lakh" (or "Rs. 1.5 Lakh").
+function formatLakh(amount) {
+  return `Rs. ${Number(amount) / 100000} Lakh`
+}
+
+// The budget buttons on the Home page send a min and/or max price.
+// This turns them back into the same words people clicked, like
+// "Under Rs. 1 Lakh", so the price filter can be shown as a chip.
+function priceLabel(minPrice, maxPrice) {
+  if (minPrice && maxPrice) return `${formatLakh(minPrice)} – ${formatLakh(maxPrice)}`
+  if (maxPrice) return `Under ${formatLakh(maxPrice)}`
+  if (minPrice) return `Above ${formatLakh(minPrice)}`
+  return ''
+}
+
+// A list of every filter that is ON right now, as { key, label } pairs.
+// Used for the removable chips and for the count on the phone button.
+// Sort is left out on purpose: it changes the order, not which bikes show.
+function getActiveFilters(filters) {
+  const active = []
+  if (filters.q) active.push({ key: 'q', label: `"${filters.q}"` })
+  if (filters.type) active.push({ key: 'type', label: typeLabels[filters.type] })
+  if (filters.brand) active.push({ key: 'brand', label: filters.brand })
+  if (filters.location) active.push({ key: 'location', label: filters.location })
+  if (filters.minPrice || filters.maxPrice) {
+    active.push({ key: 'price', label: priceLabel(filters.minPrice, filters.maxPrice) })
+  }
+  return active
+}
+
+// Shared look for every text box and dropdown. A field that is
+// actually filtering gets a soft blue tint, so you can spot it quickly.
+function fieldClasses(isActive) {
+  return `w-full border rounded-ctl py-2.5 text-sm outline-none transition focus:border-accent ${
+    isActive ? 'border-accentsoftborder bg-accentsoftbg/60' : 'border-bordercol bg-white hover:border-borderstrong'
+  }`
+}
+
+// A dropdown with our own arrow icon instead of the browser's default one.
+// `appearance-none` hides the browser arrow; the SVG sits on top of the
+// right edge, and `pointer-events-none` lets clicks pass through it.
+function SelectField({ id, value, onChange, isActive, children }) {
+  return (
+    <div className="relative">
+      <select
+        id={id}
+        value={value}
+        onChange={onChange}
+        className={`${fieldClasses(isActive)} appearance-none pl-3 pr-9`}
+      >
+        {children}
+      </select>
+      <svg
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-textmuted"
+        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+      >
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </div>
+  )
+}
 
 // The actual filter inputs, in one place. Rendered twice — once inside
 // the always-visible desktop sidebar, once inside the mobile slide-up
 // panel — so both stay in sync without duplicating the fields.
-function FilterFields({ filters, updateFilter }) {
+// `idPrefix` keeps the two copies' ids different ("desktop-brand" vs
+// "mobile-brand"), because two elements on one page must never share an id.
+function FilterFields({ filters, updateFilter, idPrefix }) {
+  const labelClasses = 'text-[13px] font-semibold text-textbody block mb-1.5'
+
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <label className="text-sm font-semibold block mb-1.5">Search</label>
-        <input
-          type="text"
-          value={filters.q}
-          onChange={(e) => updateFilter('q', e.target.value)}
-          placeholder="Brand or model"
-          className="w-full border border-bordercol focus:border-accent rounded-ctl px-3 py-2 text-sm outline-none bg-white"
-        />
+        <label htmlFor={`${idPrefix}-q`} className={labelClasses}>Search</label>
+        <div className="relative">
+          <svg
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-textfaint"
+            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.3-4.3" />
+          </svg>
+          <input
+            id={`${idPrefix}-q`}
+            type="text"
+            value={filters.q}
+            onChange={(e) => updateFilter('q', e.target.value)}
+            placeholder="Brand or model"
+            className={`${fieldClasses(Boolean(filters.q))} pl-9 pr-3`}
+          />
+        </div>
       </div>
 
       <div>
-        <label className="text-sm font-semibold block mb-1.5">Type</label>
-        <div className="flex gap-2">
+        <span id={`${idPrefix}-type-label`} className={labelClasses}>Type</span>
+        {/* One joined "segmented" control: a grey track with the chosen
+            option lifted out in blue. aria-pressed tells screen readers
+            which one is picked. */}
+        <div role="group" aria-labelledby={`${idPrefix}-type-label`} className="flex p-1 bg-sunken rounded-ctl">
           {['', 'motorcycle', 'scooter'].map((t) => (
             <button
               key={t || 'all'}
               type="button"
+              aria-pressed={filters.type === t}
               onClick={() => updateFilter('type', t)}
-              className={`text-sm px-3 py-1.5 rounded-full border transition ${
-                filters.type === t ? 'bg-ink text-white border-ink' : 'border-bordercol hover:border-borderstrong'
+              className={`flex-1 text-[12px] py-1.5 rounded-[7px] transition ${
+                filters.type === t
+                  ? 'bg-accent text-white font-semibold shadow-card'
+                  : 'text-textmuted hover:text-ink'
               }`}
             >
-              {t === '' ? 'All' : t === 'motorcycle' ? 'Motorcycle' : 'Scooter'}
+              {typeLabels[t]}
             </button>
           ))}
         </div>
       </div>
 
       <div>
-        <label className="text-sm font-semibold block mb-1.5">Brand</label>
-        <select
+        <label htmlFor={`${idPrefix}-brand`} className={labelClasses}>Brand</label>
+        <SelectField
+          id={`${idPrefix}-brand`}
           value={filters.brand}
           onChange={(e) => updateFilter('brand', e.target.value)}
-          className="w-full border border-bordercol focus:border-accent rounded-ctl px-3 py-2 text-sm bg-white"
+          isActive={Boolean(filters.brand)}
         >
           <option value="">All brands</option>
           {brands.map((b) => (
             <option key={b} value={b}>{b}</option>
           ))}
-        </select>
+        </SelectField>
       </div>
 
       <div>
-        <label className="text-sm font-semibold block mb-1.5">Location</label>
-        <select
+        <label htmlFor={`${idPrefix}-location`} className={labelClasses}>Location</label>
+        <SelectField
+          id={`${idPrefix}-location`}
           value={filters.location}
           onChange={(e) => updateFilter('location', e.target.value)}
-          className="w-full border border-bordercol focus:border-accent rounded-ctl px-3 py-2 text-sm bg-white"
+          isActive={Boolean(filters.location)}
         >
           <option value="">All locations</option>
           {Object.entries(citiesByProvince).map(([province, provinceCities]) => (
@@ -75,22 +162,51 @@ function FilterFields({ filters, updateFilter }) {
               ))}
             </optgroup>
           ))}
-        </select>
+        </SelectField>
       </div>
 
       <div>
-        <label className="text-sm font-semibold block mb-1.5">Sort by</label>
-        <select
+        <label htmlFor={`${idPrefix}-sortBy`} className={labelClasses}>Sort by</label>
+        {/* Never tinted blue: sorting isn't a filter, "Newest" is just the default order. */}
+        <SelectField
+          id={`${idPrefix}-sortBy`}
           value={filters.sortBy}
           onChange={(e) => updateFilter('sortBy', e.target.value)}
-          className="w-full border border-bordercol focus:border-accent rounded-ctl px-3 py-2 text-sm bg-white"
+          isActive={false}
         >
           <option value="">Newest</option>
           <option value="priceLowHigh">Price: Low → High</option>
           <option value="priceHighLow">Price: High → Low</option>
           <option value="lowestKm">Lowest KM</option>
-        </select>
+        </SelectField>
       </div>
+    </div>
+  )
+}
+
+// The small blue "Yamaha ✕" pills at the top of the desktop sidebar.
+// Clicking the ✕ removes just that one filter.
+function ActiveFilterChips({ activeFilters, onRemove }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {activeFilters.map((f) => (
+        <span
+          key={f.key}
+          className="inline-flex items-center gap-1 max-w-full text-xs font-semibold pl-2.5 pr-1 py-1 rounded-full bg-accentsoftbg text-accentsofttext ring-1 ring-inset ring-accentsoftborder"
+        >
+          <span className="truncate">{f.label}</span>
+          <button
+            type="button"
+            onClick={() => onRemove(f.key)}
+            aria-label={`Remove ${f.label} filter`}
+            className="shrink-0 p-0.5 rounded-full hover:bg-accentsoftborder"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </span>
+      ))}
     </div>
   )
 }
@@ -116,18 +232,34 @@ function Browse() {
   const [retryCount, setRetryCount] = useState(0)
   const [showMobileFilters, setShowMobileFilters] = useState(false)
 
+  // `(current) => ...` form: React hands us the newest filters, so two
+  // quick changes in a row can never overwrite each other.
   function updateFilter(field, value) {
-    setFilters({ ...filters, [field]: value })
+    setFilters((current) => ({ ...current, [field]: value }))
   }
 
+  // Removes one filter (used by the chips). Price is stored as two
+  // fields (min + max) but shown as one chip, so it clears both.
+  function removeFilter(key) {
+    if (key === 'price') {
+      setFilters((current) => ({ ...current, minPrice: '', maxPrice: '' }))
+    } else {
+      updateFilter(key, '')
+    }
+  }
+
+  // Clears every filter but keeps the chosen sort order, since sorting
+  // isn't a filter.
   function clearFilters() {
-    setFilters(emptyFilters)
+    setFilters((current) => ({ ...emptyFilters, sortBy: current.sortBy }))
   }
 
-  // How many filters are actually narrowing the results right now —
-  // shown as a small count on the mobile "Filters" button, so you know
-  // at a glance whether anything is applied without opening the panel.
-  const activeFilterCount = ['q', 'brand', 'type', 'location'].filter((k) => filters[k]).length
+  // Every filter that is narrowing the results right now. Its length is
+  // shown as a small count on the phone "Filters" button, and on the
+  // desktop sidebar heading. Price now counts too (before, a budget
+  // search from the Home page was invisible here).
+  const activeFilters = getActiveFilters(filters)
+  const activeFilterCount = activeFilters.length
 
   // Pressing Escape closes the mobile filter panel, same as the offer window.
   useEffect(() => {
@@ -185,8 +317,45 @@ function Browse() {
       </div>
 
       <div className="grid md:grid-cols-[260px_1fr] gap-8 mt-4 md:mt-6">
-        <aside className="hidden md:flex flex-col gap-5">
-          <FilterFields filters={filters} updateFilter={updateFilter} />
+        {/* Desktop only: the filter sidebar, in a white card.
+            `sticky` keeps it in view while you scroll the bikes; the top
+            value is the navbar's height (64px, or 72px on large screens)
+            plus a little gap, so it stops just under the navbar. */}
+        <aside className="hidden md:block">
+          <Card
+            padding="md"
+            className="sticky top-[88px] lg:top-[96px] max-h-[calc(100vh-7rem)] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="font-display font-bold text-base flex items-center gap-2">
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="min-w-5 h-5 px-1.5 rounded-full bg-accent text-white text-[11px] font-bold inline-flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </h2>
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="text-[13px] font-semibold text-accent hover:text-accenthover hover:underline"
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            {activeFilterCount > 0 && (
+              <div className="mt-3">
+                <ActiveFilterChips activeFilters={activeFilters} onRemove={removeFilter} />
+              </div>
+            )}
+
+            <div className="border-t border-bordersoft mt-4 pt-4">
+              <FilterFields filters={filters} updateFilter={updateFilter} idPrefix="desktop" />
+            </div>
+          </Card>
         </aside>
 
         <div>
@@ -242,7 +411,7 @@ function Browse() {
               </button>
             </div>
 
-            <FilterFields filters={filters} updateFilter={updateFilter} />
+            <FilterFields filters={filters} updateFilter={updateFilter} idPrefix="mobile" />
 
             <div className="flex gap-2 mt-6">
               {activeFilterCount > 0 && (

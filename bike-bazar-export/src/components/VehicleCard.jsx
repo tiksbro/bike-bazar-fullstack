@@ -14,25 +14,68 @@ const artBackgrounds = {
   teal: 'linear-gradient(160deg,#E1F4EE,#A9DCCB)',
 }
 
+function PinIcon() {
+  return (
+    <svg className="shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+}
+
+// "2023 · 5,200 KM · 150cc" (the cc part is skipped for electric bikes).
+function specsText(vehicle) {
+  return [
+    vehicle.year,
+    `${vehicle.mileageKm.toLocaleString()} KM`,
+    vehicle.fuelType !== 'Electric' && `${vehicle.engineCc}cc`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+// The "+ Compare" pill. Pulled out into its own small component because
+// the card now shows it in two places (phone layout and normal layout).
+function CompareButton({ comparing, onToggle, className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        onToggle()
+      }}
+      aria-pressed={comparing}
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1.5 text-xs font-semibold ring-1 ring-inset transition ${
+        comparing
+          ? 'bg-accentsoftbg text-accentsofttext ring-accentsoftborder'
+          : 'text-textmuted ring-bordercol hover:ring-borderstrong'
+      } ${className}`}
+    >
+      {comparing ? '✓ Comparing' : '+ Compare'}
+    </button>
+  )
+}
+
+
 function VehicleCard({ vehicle, variant = 'result' }) {
   const { isFavorite, toggleFavorite } = useFavorites()
   const { isComparing, toggleCompare } = useCompare()
 
   const favorited = isFavorite(vehicle.id)
   const comparing = isComparing(vehicle.id)
+  const isCompactOnPhone = variant === 'result'
 
-  // The whole card is a Link so any click navigates to the detail page;
-  // the heart and Compare buttons stop their clicks from bubbling up to
-  // it so they can handle their own interaction instead.
   return (
     <Link
       to={`/vehicle/${vehicle.slug}`}
       aria-label={`View ${vehicle.brand} ${vehicle.model}`}
       className="group relative flex flex-col h-full bg-white border border-bordersoft rounded-card overflow-hidden shadow-card transition duration-200 hover:shadow-cardhover hover:-translate-y-1 hover:border-bordercol"
     >
-      {/* Image area: taller than before, so the bike is the star of the card */}
+      {/* Image area: still full width on phones, just a little shorter
+          (170px instead of 200px) so the bike stays big and clear. */}
       <div
-        className="relative h-[200px]"
+        className={`relative ${isCompactOnPhone ? 'h-[170px] sm:h-[200px]' : 'h-[200px]'}`}
         style={{ background: artBackgrounds[vehicle.artColor] }}
       >
         <VehicleArt type={vehicle.type} color={vehicle.artColor} />
@@ -80,25 +123,47 @@ function VehicleCard({ vehicle, variant = 'result' }) {
         </button>
       </div>
 
-      <div className="p-4 flex-1 flex flex-col">
+      {/* Phone-only compact details (`sm:hidden` hides them from 640px up).
+          4 rows: name / specs + location / price + badge / Compare + View Details. */}
+      {isCompactOnPhone && (
+        <div className="sm:hidden p-3 flex flex-col gap-1">
+          <p className="font-display font-semibold text-[16px] leading-snug truncate">
+            {vehicle.brand} {vehicle.model}
+          </p>
+          <p className="flex items-center gap-1 text-[12.5px] text-textmuted min-w-0">
+            <span className="truncate">{specsText(vehicle)}</span>
+            <span aria-hidden="true">·</span>
+            <PinIcon />
+            <span className="truncate">{vehicle.location}</span>
+          </p>
+          <div className="flex items-center justify-between gap-2 mt-1">
+            <p className="font-display font-bold text-[19px] leading-tight">
+              Rs. {vehicle.price.toLocaleString('en-IN')}{' '}
+              <span className="font-body font-normal text-xs text-textfaint">
+                {vehicle.negotiable ? 'Negotiable' : 'Fixed'}
+              </span>
+            </p>
+            <PriceBadge insight={vehicle.priceInsight} className="shrink-0" />
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <CompareButton comparing={comparing} onToggle={() => toggleCompare(vehicle.id)} />
+            <span className="flex-1 text-center bg-sunken text-ink text-[13px] font-semibold rounded-btn py-2">
+              View Details
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* The normal details, same as before. For result cards they only
+          show from 640px up (`hidden sm:flex`); featured cards always show them. */}
+      <div className={`p-4 flex-1 flex-col ${isCompactOnPhone ? 'hidden sm:flex' : 'flex'}`}>
         <div className="flex-1 flex flex-col gap-1">
           <p className="font-display font-semibold text-[17px] leading-snug">
             {vehicle.brand} {vehicle.model}
           </p>
-          <p className="text-[13.5px] text-textmuted">
-            {[
-              vehicle.year,
-              `${vehicle.mileageKm.toLocaleString()} KM`,
-              vehicle.fuelType !== 'Electric' && `${vehicle.engineCc}cc`,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
+          <p className="text-[13.5px] text-textmuted">{specsText(vehicle)}</p>
           <p className="flex items-center gap-1 text-[13px] text-textmuted">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
+            <PinIcon />
             {vehicle.location}
           </p>
 
@@ -110,22 +175,7 @@ function VehicleCard({ vehicle, variant = 'result' }) {
           </p>
 
           <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-bordersoft">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                toggleCompare(vehicle.id)
-              }}
-              aria-pressed={comparing}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-xs font-semibold ring-1 ring-inset transition ${
-                comparing
-                  ? 'bg-accentsoftbg text-accentsofttext ring-accentsoftborder'
-                  : 'text-textmuted ring-bordercol hover:ring-borderstrong'
-              }`}
-            >
-              {comparing ? '✓ Comparing' : '+ Compare'}
-            </button>
+            <CompareButton comparing={comparing} onToggle={() => toggleCompare(vehicle.id)} />
             <PriceBadge insight={vehicle.priceInsight} />
           </div>
         </div>

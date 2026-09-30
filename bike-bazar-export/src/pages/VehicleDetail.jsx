@@ -10,6 +10,7 @@ import MakeOfferModal from '../components/MakeOfferModal'
 import Badge, { PriceBadge } from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
+import { useCompare } from '../context/CompareContext'
 
 const artBackgrounds = {
   orange: 'linear-gradient(160deg,#FDECE0,#F6C79B)',
@@ -93,8 +94,18 @@ function VehicleDetail() {
 
   const healthScore = getHealthScore(vehicle)
 
+  // One mailto link shared by the desktop buttons and the phone action bar.
+  // It stays null until the seller's email has loaded.
+  const contactHref = sellerContact
+    ? `mailto:${sellerContact.email}?subject=${encodeURIComponent(
+        `Interested in your ${vehicle.brand} ${vehicle.model} listing on Bike Bazar`
+      )}`
+    : null
+
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    // Extra bottom padding on phones (pb-28) so the sticky action bar
+    // never covers the last bit of the page.
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-28 md:pb-8">
       <Link to="/vehicles" className="text-sm text-accent font-semibold hover:underline">← Back to results</Link>
 
       <div className="grid md:grid-cols-2 gap-8 mt-4">
@@ -138,22 +149,16 @@ function VehicleDetail() {
             <PriceBadge insight={vehicle.priceInsight} />
           </div>
 
-          <div className="flex gap-3 mt-6">
-            <Button className="flex-1 sm:flex-none" onClick={() => setOfferModalOpen(true)}>
-              Make an Offer
-            </Button>
-            {sellerContact ? (
-              <Button
-                variant="secondary"
-                className="flex-1 sm:flex-none"
-                href={`mailto:${sellerContact.email}?subject=${encodeURIComponent(
-                  `Interested in your ${vehicle.brand} ${vehicle.model} listing on Bike Bazar`
-                )}`}
-              >
+          {/* Tablet/desktop buttons. On phones (`hidden md:flex`) the same
+              two actions live in the sticky bar at the bottom instead. */}
+          <div className="hidden md:flex gap-3 mt-6">
+            <Button onClick={() => setOfferModalOpen(true)}>Make an Offer</Button>
+            {contactHref ? (
+              <Button variant="secondary" href={contactHref}>
                 Contact Seller
               </Button>
             ) : (
-              <Button variant="secondary" className="flex-1 sm:flex-none" disabled>
+              <Button variant="secondary" disabled>
                 Contact Seller
               </Button>
             )}
@@ -220,7 +225,51 @@ function VehicleDetail() {
         </div>
       )}
 
+      <MobileActionBar
+        vehicle={vehicle}
+        contactHref={contactHref}
+        onMakeOffer={() => setOfferModalOpen(true)}
+      />
+
       {offerModalOpen && <MakeOfferModal vehicle={vehicle} onClose={() => setOfferModalOpen(false)} />}
+    </div>
+  )
+}
+
+// Phone-only bar pinned to the bottom of the screen, so "Make Offer" and
+// "Contact" are always one tap away while you scroll the specs.
+// It sits just above the bottom menu (bottom-16 = 64px, the menu's height).
+// If the Compare bar is showing, it moves up again so the two don't overlap.
+function MobileActionBar({ vehicle, contactHref, onMakeOffer }) {
+  const { compareIds } = useCompare()
+  const compareBarShowing = compareIds.length > 0
+
+  return (
+    <div
+      className={`md:hidden fixed left-0 right-0 z-30 bg-white border-t border-bordercol shadow-pop px-4 py-3 ${
+        compareBarShowing ? 'bottom-[124px]' : 'bottom-16'
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-display font-bold text-lg leading-tight truncate">
+            Rs. {vehicle.price.toLocaleString('en-IN')}
+          </p>
+          <p className="text-xs text-textfaint">{vehicle.negotiable ? 'Negotiable' : 'Fixed price'}</p>
+        </div>
+        {contactHref ? (
+          <Button variant="secondary" size="sm" className="py-2.5" href={contactHref}>
+            Contact
+          </Button>
+        ) : (
+          <Button variant="secondary" size="sm" className="py-2.5" disabled>
+            Contact
+          </Button>
+        )}
+        <Button size="sm" className="py-2.5" onClick={onMakeOffer}>
+          Make Offer
+        </Button>
+      </div>
     </div>
   )
 }

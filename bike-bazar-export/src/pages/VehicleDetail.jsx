@@ -168,21 +168,11 @@ function VehicleDetail() {
             )}
           </div>
 
-          <Card padding="sm" className="mt-8">
-            <p className="text-xs font-bold uppercase tracking-wide text-textfaint">Seller</p>
-            <p className="font-semibold mt-1">
-              {vehicle.verifiedSeller ? 'Verified Individual Seller' : 'Unverified Seller'}
-            </p>
-            <p className="text-sm text-textmuted mt-0.5">{vehicle.location}</p>
-            {sellerRating && sellerRating.totalCount > 0 && (
-              <p className="text-sm mt-1.5">
-                <span className="text-warning">★</span> {sellerRating.averageStars}{' '}
-                <span className="text-textfaint">
-                  ({sellerRating.totalCount} rating{sellerRating.totalCount > 1 ? 's' : ''})
-                </span>
-              </p>
-            )}
-          </Card>
+          <SellerCard
+            vehicle={vehicle}
+            sellerName={sellerContact?.name}
+            sellerRating={sellerRating}
+          />
           <ReportListingBox vehicleId={vehicle.id} />
         </div>
       </div>
@@ -237,6 +227,95 @@ function VehicleDetail() {
 
       {offerModalOpen && <MakeOfferModal vehicle={vehicle} onClose={() => setOfferModalOpen(false)} />}
     </div>
+  )
+}
+
+// Works out when the seller joined, from their user id.
+// A MongoDB id starts with the time it was created (first 8 characters, in
+// hexadecimal = base 16, counting seconds since 1970). So we can read the
+// sign-up date straight out of the id, without asking the backend.
+function getMemberSince(userId) {
+  if (typeof userId !== 'string' || userId.length < 8) return null
+  const secondsSince1970 = parseInt(userId.substring(0, 8), 16)
+  if (Number.isNaN(secondsSince1970)) return null
+  return new Date(secondsSince1970 * 1000).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+}
+
+// "Tikaram Chimariya" -> "TC". Shown in the round avatar.
+function getInitials(name) {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join('')
+}
+
+// The seller box: who is selling, when they joined, and how buyers rated them.
+function SellerCard({ vehicle, sellerName, sellerRating }) {
+  const memberSince = getMemberSince(vehicle.owner)
+  const hasRatings = sellerRating && sellerRating.totalCount > 0
+
+  return (
+    <Card padding="sm" className="mt-8">
+      <p className="text-xs font-bold uppercase tracking-wide text-textfaint">Seller</p>
+
+      <div className="flex items-center gap-3 mt-3">
+        <span
+          aria-hidden="true"
+          className="w-12 h-12 shrink-0 rounded-full bg-accentsoftbg text-accentsofttext font-display font-bold flex items-center justify-center"
+        >
+          {sellerName ? getInitials(sellerName) : '?'}
+        </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <p className="font-semibold truncate">{sellerName || 'Seller'}</p>
+            {vehicle.verifiedSeller ? (
+              <Badge variant="success">Verified</Badge>
+            ) : (
+              <Badge variant="neutral">Not verified</Badge>
+            )}
+          </div>
+          <p className="text-sm text-textmuted mt-0.5">
+            {vehicle.location}
+            {memberSince && ` · Member since ${memberSince}`}
+          </p>
+        </div>
+      </div>
+
+      {/* Ratings get their own highlighted row so buyers notice them. */}
+      <div className="flex items-center gap-3 mt-4 rounded-ctl bg-sunken px-3 py-2.5">
+        {hasRatings ? (
+          <>
+            <StarRow stars={sellerRating.averageStars} />
+            <p className="text-sm">
+              <span className="font-display font-bold text-lg">{sellerRating.averageStars}</span>
+              <span className="text-textmuted">
+                {' '}
+                from {sellerRating.totalCount} buyer rating{sellerRating.totalCount > 1 ? 's' : ''}
+              </span>
+            </p>
+          </>
+        ) : (
+          <p className="text-sm text-textmuted">No ratings yet. Buyers can rate this seller after an accepted offer.</p>
+        )}
+      </div>
+
+    </Card>
+  )
+}
+
+// 5 stars, filled up to the rounded average (4.4 -> 4 stars, 4.5 -> 5 stars).
+function StarRow({ stars }) {
+  const filledCount = Math.round(stars)
+  return (
+    <span className="flex text-lg leading-none" role="img" aria-label={`${stars} out of 5 stars`}>
+      {[1, 2, 3, 4, 5].map((number) => (
+        <span key={number} className={number <= filledCount ? 'text-featured' : 'text-bordercol'}>
+          ★
+        </span>
+      ))}
+    </span>
   )
 }
 

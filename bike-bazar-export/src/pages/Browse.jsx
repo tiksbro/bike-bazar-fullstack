@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import VehicleCard from '../components/VehicleCard'
+import { VehicleGridSkeleton } from '../components/Skeleton'
 import { listVehicles } from '../services/vehicleService'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { citiesByProvince } from '../data/cities'
@@ -360,7 +361,7 @@ function Browse() {
 
         <div>
           {loading ? (
-            <p className="text-textmuted text-sm">Loading vehicles...</p>
+            <VehicleGridSkeleton count={6} />
           ) : error ? (
             <div className="text-center py-10">
               <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>

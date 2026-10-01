@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { FavoritesProvider } from './context/FavoritesContext'
 import { CompareProvider } from './context/CompareContext'
+import { ToastProvider } from './context/ToastContext'
 import MainLayout from './layouts/MainLayout'
 import Home from './pages/Home'
 import Browse from './pages/Browse'
@@ -26,38 +27,41 @@ import MyOffers from './pages/MyOffers'
 
 function App() {
   return (
-    <AuthProvider>
-      <FavoritesProvider>
-        <CompareProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route element={<MainLayout />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/vehicles" element={<Browse />} />
-                <Route path="/vehicle/:slug" element={<VehicleDetail />} />
-                <Route path="/new-bikes" element={<NewBikes />} />
-                <Route path="/new-bikes/:slug" element={<NewBikeDetail />} />
-                <Route path="/favorites" element={<Favorites />} />
-                <Route path="/compare" element={<Compare />} />
-                <Route path="/sell" element={<Sell />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dealers" element={<Dealers />} />
-                <Route path="/dealer/:id" element={<DealerDetail />} />
-                <Route path="/services" element={<Services />} />
-                <Route path="/safety" element={<Safety />} />
-                <Route path="/guides" element={<Guides />} />
-                <Route path="/tax-calculator" element={<TaxCalculator />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="*" element={<NotFound />} />
-                <Route path="/my-offers" element={<MyOffers />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </CompareProvider>
-      </FavoritesProvider>
-    </AuthProvider>
+    
+    <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
+          <FavoritesProvider>
+            <CompareProvider>
+              <Routes>
+                <Route element={<MainLayout />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/vehicles" element={<Browse />} />
+                  <Route path="/vehicle/:slug" element={<VehicleDetail />} />
+                  <Route path="/new-bikes" element={<NewBikes />} />
+                  <Route path="/new-bikes/:slug" element={<NewBikeDetail />} />
+                  <Route path="/favorites" element={<Favorites />} />
+                  <Route path="/compare" element={<Compare />} />
+                  <Route path="/sell" element={<Sell />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dealers" element={<Dealers />} />
+                  <Route path="/dealer/:id" element={<DealerDetail />} />
+                  <Route path="/services" element={<Services />} />
+                  <Route path="/safety" element={<Safety />} />
+                  <Route path="/guides" element={<Guides />} />
+                  <Route path="/tax-calculator" element={<TaxCalculator />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="*" element={<NotFound />} />
+                  <Route path="/my-offers" element={<MyOffers />} />
+                </Route>
+              </Routes>
+            </CompareProvider>
+          </FavoritesProvider>
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
   )
 }
 

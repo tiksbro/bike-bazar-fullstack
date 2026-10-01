@@ -6,6 +6,8 @@ import Card from '../components/Card'
 import Badge from '../components/Badge'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
+import VehicleArt from '../components/VehicleArt'
+import VehiclePhoto from '../components/VehiclePhoto'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -26,6 +28,9 @@ function Dashboard() {
   const [offers, setOffers] = useState([])
   const [offersLoading, setOffersLoading] = useState(true)
   const [offersError, setOffersError] = useState('')
+  // The listing the person pressed "Delete" on. While this is set, the
+  // "Are you sure?" window is open. null = window closed.
+  const [vehiclePendingDelete, setVehiclePendingDelete] = useState(null)
 
   function getToken() {
     return localStorage.getItem('bikebazar_token')
@@ -110,13 +115,19 @@ function Dashboard() {
     }
   }
 
+  // Only runs after the person confirms in the "Are you sure?" window.
+  // Returns true if it worked, so the window knows whether to close.
   async function deleteListing(vehicleId) {
-    const res = await fetch(`${API_URL}/vehicles/${vehicleId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${getToken()}` },
-    })
-    if (res.ok) {
+    try {
+      const res = await fetch(`${API_URL}/vehicles/${vehicleId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      })
+      if (!res.ok) return false
       setListings(listings.filter((l) => l.id !== vehicleId))
+      return true
+    } catch {
+      return false
     }
   }
 
@@ -150,20 +161,43 @@ function Dashboard() {
   const activeCount = listings.filter((l) => l.status === 'active' || !l.status).length
   const pausedCount = listings.filter((l) => l.status === 'paused').length
   const soldCount = listings.filter((l) => l.status === 'sold').length
+  const boostedCount = listings.filter((l) => l.featured).length
+  const pendingOffersCount = offers.filter((o) => o.status === 'pending').length
+
+  // Offers still waiting for a reply go first, so the seller sees them straight away.
+  // (sort keeps the original order inside each group.)
+  const sortedOffers = [...offers].sort(
+    (a, b) => Number(b.status === 'pending') - Number(a.status === 'pending')
+  )
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="font-display font-bold text-[26px]">Seller Dashboard</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        <StatCard label="Total Listings" value={totalCount} />
-        <StatCard label="Active" value={activeCount} />
-        <StatCard label="Paused" value={pausedCount} />
-        <StatCard label="Sold" value={soldCount} />
+      <p className="text-sm text-textmuted mt-1">Manage your listings and reply to buyers' offers.</p>
+
+      {/* "Offers waiting" turns amber when a buyer is waiting for a reply. */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-6">
+        <StatCard
+          label="Offers waiting"
+          value={offersLoading ? '–' : pendingOffersCount}
+          hint={pendingOffersCount > 0 ? 'Reply below' : 'All caught up'}
+          attention={pendingOffersCount > 0}
+        />
+        <StatCard label="Active listings" value={activeCount} hint={`${pausedCount} paused`} />
+        <StatCard label="Sold" value={soldCount} hint={soldCount === 1 ? '1 bike sold' : `${soldCount} bikes sold`} />
+        <StatCard label="Total listings" value={totalCount} hint={`${boostedCount} boosted`} />
       </div>
 
       <div className="mt-10">
-        <h2 className="font-display font-bold text-xl">Offers Received</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-display font-bold text-xl">Offers Received</h2>
+          {pendingOffersCount > 0 && (
+            <Badge variant="warning" dot>
+              {pendingOffersCount} waiting for reply
+            </Badge>
+          )}
+        </div>
         {offersLoading ? (
           <p className="text-textmuted text-sm mt-4">Loading offers...</p>
         ) : offersError ? (
@@ -177,7 +211,7 @@ function Dashboard() {
           </div>
         ) : (
           <div className="flex flex-col gap-3 mt-4">
-            {offers.map((offer) => (
+            {sortedOffers.map((offer) => (
               <OfferCard key={offer.id} offer={offer} onRespond={respondToOffer} />
             ))}
           </div>
@@ -220,23 +254,26 @@ function Dashboard() {
                   padding="sm"
                   className="flex flex-col sm:flex-row sm:items-center gap-4"
                 >
-                  <div className="flex-1">
-                    <p className="font-display font-semibold">
-                      {vehicle.brand} {vehicle.model}
-                    </p>
-                    <p className="text-sm text-textmuted">Rs. {vehicle.price.toLocaleString('en-IN')}</p>
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <Badge variant={s.variant} dot>
-                        {s.label}
-                      </Badge>
-                      {vehicle.featured && (
-                        <Badge variant="featured">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z" />
-                          </svg>
-                          Featured
+                  <div className="flex-1 flex items-center gap-3 min-w-0">
+                    <ListingThumbnail vehicle={vehicle} />
+                    <div className="min-w-0">
+                      <p className="font-display font-semibold">
+                        {vehicle.brand} {vehicle.model}
+                      </p>
+                      <p className="text-sm text-textmuted">Rs. {vehicle.price.toLocaleString('en-IN')}</p>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <Badge variant={s.variant} dot>
+                          {s.label}
                         </Badge>
-                      )}
+                        {vehicle.featured && (
+                          <Badge variant="featured">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                              <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z" />
+                            </svg>
+                            Featured
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -263,7 +300,7 @@ function Dashboard() {
                         Boost (7 days)
                       </Button>
                     )}
-                    <Button variant="danger" size="sm" onClick={() => deleteListing(vehicle.id)}>
+                    <Button variant="danger" size="sm" onClick={() => setVehiclePendingDelete(vehicle)}>
                       Delete
                     </Button>
                   </div>
@@ -273,7 +310,126 @@ function Dashboard() {
           </div>
         )}
       </div>
+
+      {vehiclePendingDelete && (
+        <ConfirmDeleteDialog
+          vehicle={vehiclePendingDelete}
+          onConfirm={() => deleteListing(vehiclePendingDelete.id)}
+          onClose={() => setVehiclePendingDelete(null)}
+        />
+      )}
     </div>
+  )
+}
+
+const artBackgrounds = {
+  orange: 'linear-gradient(160deg,#FDECE0,#F6C79B)',
+  blue: 'linear-gradient(160deg,#E7EDFB,#B9C8F0)',
+  graphite: 'linear-gradient(160deg,#EDEEF0,#C7CACF)',
+  teal: 'linear-gradient(160deg,#E1F4EE,#A9DCCB)',
+}
+
+// Small picture on each listing row: the cover photo, or the bike drawing for old listings.
+function ListingThumbnail({ vehicle }) {
+  const coverPhoto = vehicle.photos?.[0]
+  return (
+    <div
+      className="relative w-20 h-16 shrink-0 rounded-ctl overflow-hidden"
+      style={{ background: artBackgrounds[vehicle.artColor] }}
+    >
+      {coverPhoto ? (
+        <VehiclePhoto photo={coverPhoto} width={160} alt="" />
+      ) : (
+        <VehicleArt type={vehicle.type} color={vehicle.artColor} />
+      )}
+    </div>
+  )
+}
+
+// The "Are you sure?" window shown before a listing is deleted.
+// Deleting can't be undone, so we ask once more and say exactly what will happen.
+function ConfirmDeleteDialog({ vehicle, onConfirm, onClose }) {
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+  const title = `${vehicle.brand} ${vehicle.model}`
+
+  // Pressing Escape closes the window (but not while the delete is running).
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === 'Escape' && !deleting) onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [deleting, onClose])
+
+  async function handleDelete() {
+    setDeleting(true)
+    setError('')
+    const worked = await onConfirm()
+    if (worked) {
+      onClose()
+    } else {
+      setDeleting(false)
+      setError("Couldn't delete this listing. Please try again.")
+    }
+  }
+
+  return (
+    // The dark background. Clicking it closes the window, like pressing Cancel.
+    <div
+      className="fixed inset-0 bg-ink/50 flex items-end sm:items-center justify-center z-[60] p-4"
+      onClick={() => !deleting && onClose()}
+    >
+      <Card
+        padding="lg"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-dialog-title"
+        aria-describedby="delete-dialog-message"
+        className="w-full max-w-[420px] shadow-pop"
+        // Clicks inside the white box should NOT reach the dark background.
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="w-11 h-11 rounded-full bg-dangerbg text-danger flex items-center justify-center">
+          <TrashIcon />
+        </div>
+        <h2 id="delete-dialog-title" className="font-display font-bold text-xl mt-4">
+          Delete this listing?
+        </h2>
+        <p id="delete-dialog-message" className="text-sm text-textmuted mt-2">
+          Your <span className="font-semibold text-ink">{title}</span> listing and its photos will be removed for
+          good. Buyers won't see it anymore, and this can't be undone.
+        </p>
+        {vehicle.status !== 'sold' && (
+          <p className="text-sm text-textmuted mt-2">
+            Sold it? Use <span className="font-semibold text-ink">Mark Sold</span> instead to keep a record.
+          </p>
+        )}
+
+        {error && (
+          <p role="alert" className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-4">
+            {error}
+          </p>
+        )}
+
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-6">
+          <Button variant="secondary" onClick={onClose} disabled={deleting} autoFocus>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleDelete} loading={deleting}>
+            {deleting ? 'Deleting...' : 'Yes, delete it'}
+          </Button>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
+    </svg>
   )
 }
 

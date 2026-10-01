@@ -1,14 +1,15 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
+import { useToast } from './ToastContext'
 
 const FavoritesContext = createContext()
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
 export function FavoritesProvider({ children }) {
-  // Reading useAuth() here works because AuthProvider already wraps
-  // FavoritesProvider in App.jsx — a Context can only be read by
-  // components nested INSIDE its Provider.
+ 
   const { user } = useAuth()
+  // ToastProvider wraps FavoritesProvider in App.jsx, so we can show toasts from here.
+  const { showToast } = useToast()
   const [favoriteIds, setFavoriteIds] = useState([])
 
   function getToken() {
@@ -36,20 +37,30 @@ export function FavoritesProvider({ children }) {
   }, [user])
 
   async function toggleFavorite(vehicleId) {
-    // Not logged in? Nothing to attach a favorite to — quietly do
-    // nothing. (A nicer version could redirect to /login instead; that's
-    // a reasonable next polish step, not something we're building now.)
-    if (!user) return
+    // Not logged in? Favorites belong to an account, so tell the person
+    // why nothing happened and give them a quick way to log in.
+    if (!user) {
+      showToast('Log in to save favorites', { tone: 'info', action: { label: 'Log in', to: '/login' } })
+      return
+    }
 
     const alreadyFavorited = favoriteIds.includes(vehicleId)
     const headers = { Authorization: `Bearer ${getToken()}` }
 
-    if (alreadyFavorited) {
-      await fetch(`${API_URL}/favorites/${vehicleId}`, { method: 'DELETE', headers })
-      setFavoriteIds(favoriteIds.filter((id) => id !== vehicleId))
-    } else {
-      await fetch(`${API_URL}/favorites/${vehicleId}`, { method: 'POST', headers })
-      setFavoriteIds([...favoriteIds, vehicleId])
+    try {
+      if (alreadyFavorited) {
+        const res = await fetch(`${API_URL}/favorites/${vehicleId}`, { method: 'DELETE', headers })
+        if (!res.ok) throw new Error('remove failed')
+        setFavoriteIds(favoriteIds.filter((id) => id !== vehicleId))
+        showToast('Removed from favorites', { tone: 'info' })
+      } else {
+        const res = await fetch(`${API_URL}/favorites/${vehicleId}`, { method: 'POST', headers })
+        if (!res.ok) throw new Error('add failed')
+        setFavoriteIds([...favoriteIds, vehicleId])
+        showToast('Added to favorites', { action: { label: 'View', to: '/favorites' } })
+      }
+    } catch {
+      showToast("Couldn't update favorites. Please try again.", { tone: 'error' })
     }
   }
 

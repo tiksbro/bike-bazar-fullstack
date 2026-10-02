@@ -6,6 +6,7 @@ import Card from '../components/Card'
 import Badge from '../components/Badge'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
+import { Skeleton, ListSkeleton } from '../components/Skeleton'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -126,11 +127,7 @@ function Admin() {
   const pendingReportsCount = reports.filter((r) => r.status === 'pending').length
 
   if (loading) {
-    return (
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <p className="text-textmuted">Loading admin dashboard...</p>
-      </div>
-    )
+    return <AdminSkeleton />
   }
 
   if (error) {
@@ -165,7 +162,10 @@ function Admin() {
             </p>
           </Card>
         ) : reportsLoading ? (
-          <p className="text-textmuted text-sm mt-4">Loading reports...</p>
+          // 2 grey rows shaped like report cards (no picture).
+          <div className="mt-4">
+            <ListSkeleton rows={2} label="Loading reports" thumbnail={false} />
+          </div>
         ) : reportsError ? (
           <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-4 inline-block">{reportsError}</p>
         ) : reports.length === 0 ? (
@@ -220,6 +220,37 @@ function Admin() {
               </Card>
             )
           })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Grey copy of the admin page: heading, 5 number cards, then the two
+// lists (reports and listing moderation) as grey rows.
+function AdminSkeleton() {
+  return (
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8" role="status" aria-label="Loading admin dashboard">
+      <h1 className="font-display font-bold text-[26px]">Admin Dashboard</h1>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mt-6">
+        {Array.from({ length: 5 }, (_, index) => (
+          <div key={index} className="bg-white border border-bordersoft rounded-card shadow-card p-4">
+            <Skeleton className="h-3.5 w-1/2" />
+            <Skeleton className="h-8 w-1/3 mt-2" />
+          </div>
+        ))}
+      </div>
+
+      {/* aria-hidden: the outer box already says "Loading admin dashboard". */}
+      <div aria-hidden="true">
+        <Skeleton className="h-6 w-48 mt-10" />
+        <div className="mt-4">
+          <ListSkeleton rows={2} thumbnail={false} />
+        </div>
+        <Skeleton className="h-6 w-48 mt-10" />
+        <div className="mt-4">
+          <ListSkeleton rows={3} thumbnail={false} />
         </div>
       </div>
     </div>

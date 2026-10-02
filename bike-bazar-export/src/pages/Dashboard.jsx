@@ -8,6 +8,7 @@ import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
 import VehicleArt from '../components/VehicleArt'
 import VehiclePhoto from '../components/VehiclePhoto'
+import { ListSkeleton } from '../components/Skeleton'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -176,17 +177,24 @@ function Dashboard() {
 
       <p className="text-sm text-textmuted mt-1">Manage your listings and reply to buyers' offers.</p>
 
-      {/* "Offers waiting" turns amber when a buyer is waiting for a reply. */}
+      {/* "Offers waiting" turns amber when a buyer is waiting for a reply.
+          While data is still loading, the cards show "–" instead of a wrong
+          "0", and the small hint line is blank (a non-breaking space keeps
+          its height, so the cards don't grow when the numbers arrive). */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mt-6">
         <StatCard
           label="Offers waiting"
           value={offersLoading ? '–' : pendingOffersCount}
-          hint={pendingOffersCount > 0 ? 'Reply below' : 'All caught up'}
+          hint={offersLoading ? '\u00A0' : pendingOffersCount > 0 ? 'Reply below' : 'All caught up'}
           attention={pendingOffersCount > 0}
         />
-        <StatCard label="Active listings" value={activeCount} hint={`${pausedCount} paused`} />
-        <StatCard label="Sold" value={soldCount} hint={soldCount === 1 ? '1 bike sold' : `${soldCount} bikes sold`} />
-        <StatCard label="Total listings" value={totalCount} hint={`${boostedCount} boosted`} />
+        <StatCard label="Active listings" value={loading ? '–' : activeCount} hint={loading ? '\u00A0' : `${pausedCount} paused`} />
+        <StatCard
+          label="Sold"
+          value={loading ? '–' : soldCount}
+          hint={loading ? '\u00A0' : soldCount === 1 ? '1 bike sold' : `${soldCount} bikes sold`}
+        />
+        <StatCard label="Total listings" value={loading ? '–' : totalCount} hint={loading ? '\u00A0' : `${boostedCount} boosted`} />
       </div>
 
       <div className="mt-10">
@@ -199,7 +207,10 @@ function Dashboard() {
           )}
         </div>
         {offersLoading ? (
-          <p className="text-textmuted text-sm mt-4">Loading offers...</p>
+          // 2 grey rows shaped like offer cards (no picture, same as the real ones).
+          <div className="mt-4">
+            <ListSkeleton rows={2} label="Loading offers" thumbnail={false} />
+          </div>
         ) : offersError ? (
           <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 mt-4 inline-block">{offersError}</p>
         ) : offers.length === 0 ? (
@@ -226,7 +237,10 @@ function Dashboard() {
           </Button>
         </div>
         {loading ? (
-          <p className="text-textmuted text-sm mt-4">Loading your listings...</p>
+          // 3 grey rows shaped like listing rows (picture, name, status).
+          <div className="mt-4">
+            <ListSkeleton rows={3} label="Loading your listings" />
+          </div>
         ) : error ? (
           <Card padding="lg" className="mt-6 text-center">
             <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>

@@ -5,6 +5,7 @@ import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import EmptyState from '../components/EmptyState'
+import { ListSkeleton } from '../components/Skeleton'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 
@@ -67,7 +68,10 @@ function MyOffers() {
     <div className="max-w-[900px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="font-display font-bold text-[26px]">My Offers</h1>
       {loading ? (
-        <p className="text-textmuted text-sm mt-4">Loading your offers...</p>
+        // 3 grey rows shaped like offer cards (no picture, same as the real ones).
+        <div className="mt-4">
+          <ListSkeleton rows={3} label="Loading your offers" thumbnail={false} />
+        </div>
       ) : error ? (
         <Card padding="lg" className="mt-6 text-center">
           <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>

@@ -42,10 +42,12 @@ export function VehicleGridSkeleton({ count = 6, className = 'grid sm:grid-cols-
 }
 
 // Looks like one row in a list (Dashboard listings, offers, dealers...).
-export function ListRowSkeleton() {
+// thumbnail={false} leaves out the picture box, for rows that have no
+// picture (offer cards).
+export function ListRowSkeleton({ thumbnail = true }) {
   return (
     <div className="bg-white border border-bordersoft rounded-card shadow-card p-4 flex items-center gap-3">
-      <Skeleton className="w-20 h-16 shrink-0" />
+      {thumbnail && <Skeleton className="w-20 h-16 shrink-0" />}
       <div className="flex-1 flex flex-col gap-2">
         <Skeleton className="h-4 w-2/5" />
         <Skeleton className="h-3.5 w-1/4" />
@@ -56,11 +58,11 @@ export function ListRowSkeleton() {
 }
 
 // Several list rows stacked, with one "Loading..." label for screen readers.
-export function ListSkeleton({ rows = 3, label = 'Loading' }) {
+export function ListSkeleton({ rows = 3, label = 'Loading', thumbnail = true }) {
   return (
     <div className="flex flex-col gap-3" role="status" aria-label={label}>
       {Array.from({ length: rows }, (_, index) => (
-        <ListRowSkeleton key={index} />
+        <ListRowSkeleton key={index} thumbnail={thumbnail} />
       ))}
     </div>
   )

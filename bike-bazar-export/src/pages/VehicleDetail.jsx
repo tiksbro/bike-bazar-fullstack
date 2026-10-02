@@ -11,6 +11,7 @@ import MakeOfferModal from '../components/MakeOfferModal'
 import Badge, { PriceBadge } from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
+import { Skeleton } from '../components/Skeleton'
 import { useCompare } from '../context/CompareContext'
 
 const artBackgrounds = {
@@ -63,11 +64,7 @@ function VehicleDetail() {
   useDocumentTitle(loading ? 'Loading...' : error ? 'Error' : vehicle ? `${vehicle.brand} ${vehicle.model}` : 'Vehicle Not Found')
 
   if (loading) {
-    return (
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-        <p className="text-textmuted">Loading vehicle...</p>
-      </div>
-    )
+    return <VehicleDetailSkeleton />
   }
 
   if (error) {
@@ -107,22 +104,29 @@ function VehicleDetail() {
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <Link to="/vehicles" className="text-sm text-accent font-semibold hover:underline">← Back to results</Link>
 
-      <div className="grid md:grid-cols-2 gap-8 mt-4">
-        {/* New listings show their photos. Old listings have none, so they keep the bike drawing. */}
-        {vehicle.photos?.length > 0 ? (
-          <PhotoGallery photos={vehicle.photos} title={`${vehicle.brand} ${vehicle.model}`} />
-        ) : (
-          <div
-            className="relative rounded-card overflow-hidden shadow-card h-[260px] md:h-[340px]"
-            style={{ background: artBackgrounds[vehicle.artColor] }}
-          >
-            <VehicleArt type={vehicle.type} color={vehicle.artColor} />
-          </div>
-        )}
+      <div className="grid md:grid-cols-2 gap-6 md:gap-10 mt-4">
+        {/* On tablet/desktop the picture column is "sticky": it stays in view while
+            you scroll the (taller) details column next to it, so there is no
+            big empty gap under the picture. self-start stops it stretching. */}
+        <div className="md:sticky md:top-24 self-start">
+          {/* New listings show their photos. Old listings have none, so they keep the bike drawing. */}
+          {vehicle.photos?.length > 0 ? (
+            <PhotoGallery photos={vehicle.photos} title={`${vehicle.brand} ${vehicle.model}`} />
+          ) : (
+            <div
+              className="relative rounded-card overflow-hidden shadow-card h-[260px] md:h-[340px]"
+              style={{ background: artBackgrounds[vehicle.artColor] }}
+            >
+              <VehicleArt type={vehicle.type} color={vehicle.artColor} />
+            </div>
+          )}
+        </div>
 
         <div>
-          <h1 className="font-display font-bold text-[28px]">{vehicle.brand} {vehicle.model}</h1>
-          <p className="text-textmuted mt-1">
+          <h1 className="font-display font-bold text-[26px] sm:text-[30px] leading-tight">
+            {vehicle.brand} {vehicle.model}
+          </h1>
+          <p className="text-textmuted mt-2">
             {[
               vehicle.year,
               `${vehicle.mileageKm.toLocaleString()} KM`,
@@ -132,9 +136,13 @@ function VehicleDetail() {
               .filter(Boolean)
               .join(' · ')}
           </p>
-          <p className="text-textmuted">{vehicle.location}</p>
+          <p className="flex items-center gap-1.5 text-textmuted mt-1">
+            <PinIcon />
+            {vehicle.location}
+          </p>
 
-          <p className="font-display font-bold text-[32px] mt-4">
+          {/* Price block: a thin line above it separates "what is it" from "what does it cost". */}
+          <p className="font-display font-bold text-[32px] leading-tight mt-5 pt-5 border-t border-bordersoft">
             Rs. {vehicle.price.toLocaleString('en-IN')}{' '}
             <span className="font-body font-normal text-sm text-textfaint">
               {vehicle.negotiable ? 'Negotiable' : 'Fixed'}
@@ -177,8 +185,35 @@ function VehicleDetail() {
         </div>
       </div>
 
-      <div className="mt-10">
-        <h2 className="font-display font-bold text-xl">Bike Health Score</h2>
+      {/* The seller's own words from the Sell form. Only shown if they wrote something.
+          whitespace-pre-line keeps the line breaks they typed. */}
+      {vehicle.description?.trim() && (
+        <section className="mt-12">
+          <SectionHeading>About this vehicle</SectionHeading>
+          <Card className="mt-4">
+            <p className="text-textbody leading-relaxed whitespace-pre-line break-words max-w-[75ch]">
+              {vehicle.description.trim()}
+            </p>
+          </Card>
+        </section>
+      )}
+
+      <section className="mt-12">
+        <SectionHeading>Specifications</SectionHeading>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+          <Spec label="Brand" value={vehicle.brand} />
+          <Spec label="Model" value={vehicle.model} />
+          <Spec label="Year" value={vehicle.year} />
+          <Spec label="KM Driven" value={vehicle.mileageKm.toLocaleString()} />
+          <Spec label="Engine" value={vehicle.engineCc ? `${vehicle.engineCc}cc` : '—'} />
+          <Spec label="Fuel Type" value={vehicle.fuelType} />
+          <Spec label="Location" value={vehicle.location} />
+          <Spec label="Type" value={vehicle.type === 'motorcycle' ? 'Motorcycle' : 'Scooter'} />
+        </div>
+      </section>
+
+      <section className="mt-12">
+        <SectionHeading>Bike Health Score</SectionHeading>
         <Card className="flex flex-col sm:flex-row gap-6 items-center sm:items-start mt-4">
           <HealthScoreGauge score={healthScore.overall} />
           <HealthScoreBreakdown items={[
@@ -192,31 +227,17 @@ function VehicleDetail() {
         <p className="text-xs text-textfaint mt-2">
           This is a platform estimate based on listing details, not a professional mechanical inspection.
         </p>
-      </div>
-
-      <div className="mt-10">
-        <h2 className="font-display font-bold text-xl">Specifications</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
-          <Spec label="Brand" value={vehicle.brand} />
-          <Spec label="Model" value={vehicle.model} />
-          <Spec label="Year" value={vehicle.year} />
-          <Spec label="KM Driven" value={vehicle.mileageKm.toLocaleString()} />
-          <Spec label="Engine" value={vehicle.engineCc ? `${vehicle.engineCc}cc` : '—'} />
-          <Spec label="Fuel Type" value={vehicle.fuelType} />
-          <Spec label="Location" value={vehicle.location} />
-          <Spec label="Type" value={vehicle.type === 'motorcycle' ? 'Motorcycle' : 'Scooter'} />
-        </div>
-      </div>
+      </section>
 
       {similar.length > 0 && (
-        <div className="mt-12">
-          <h2 className="font-display font-bold text-xl">Similar Vehicles</h2>
+        <section className="mt-12">
+          <SectionHeading>Similar Vehicles</SectionHeading>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
             {similar.map((v) => (
               <VehicleCard key={v.id} vehicle={v} variant="result" />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       <MobileActionBar
@@ -234,6 +255,50 @@ function VehicleDetail() {
 // A MongoDB id starts with the time it was created (first 8 characters, in
 // hexadecimal = base 16, counting seconds since 1970). So we can read the
 // sign-up date straight out of the id, without asking the backend.
+// Grey placeholder shaped like the real page: picture on the left, title,
+// price, buttons and seller box on the right (stacked on phones). When the
+// real listing arrives, everything lands in the same place, so nothing jumps.
+function VehicleDetailSkeleton() {
+  return (
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8" role="status" aria-label="Loading vehicle">
+      <Skeleton className="h-4 w-32" />
+
+      <div className="grid md:grid-cols-2 gap-6 md:gap-10 mt-4">
+        <Skeleton className="h-[260px] md:h-[340px] rounded-card" />
+
+        <div>
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-4 w-1/2 mt-3" />
+          <Skeleton className="h-4 w-1/3 mt-2" />
+
+          <div className="mt-5 pt-5 border-t border-bordersoft">
+            <Skeleton className="h-9 w-2/5" />
+          </div>
+          <div className="flex gap-2 mt-3">
+            <Skeleton className="h-6 w-28 rounded-full" />
+            <Skeleton className="h-6 w-24 rounded-full" />
+          </div>
+
+          {/* Buttons only on tablet/desktop, same as the real page. */}
+          <div className="hidden md:flex gap-3 mt-6">
+            <Skeleton className="h-11 w-36 rounded-btn" />
+            <Skeleton className="h-11 w-36 rounded-btn" />
+          </div>
+
+          {/* Seller box */}
+          <div className="bg-white border border-bordersoft rounded-card shadow-card p-5 mt-6 flex items-center gap-3">
+            <Skeleton className="w-12 h-12 rounded-full shrink-0" />
+            <div className="flex-1 flex flex-col gap-2">
+              <Skeleton className="h-4 w-2/5" />
+              <Skeleton className="h-3.5 w-1/3" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function getMemberSince(userId) {
   if (typeof userId !== 'string' || userId.length < 8) return null
   const secondsSince1970 = parseInt(userId.substring(0, 8), 16)
@@ -257,7 +322,7 @@ function SellerCard({ vehicle, sellerName, sellerRating }) {
   const hasRatings = sellerRating && sellerRating.totalCount > 0
 
   return (
-    <Card padding="sm" className="mt-8">
+    <Card padding="sm" className="mt-6">
       <p className="text-xs font-bold uppercase tracking-wide text-textfaint">Seller</p>
 
       <div className="flex items-center gap-3 mt-3">
@@ -538,6 +603,20 @@ function ReportListingBox({ vehicleId }) {
         </Button>
       </div>
     </Card>
+  )
+}
+
+// Same heading style for every section below the top area.
+function SectionHeading({ children }) {
+  return <h2 className="font-display font-bold text-xl">{children}</h2>
+}
+
+function PinIcon() {
+  return (
+    <svg className="shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
+      <circle cx="12" cy="10" r="3" />
+    </svg>
   )
 }
 

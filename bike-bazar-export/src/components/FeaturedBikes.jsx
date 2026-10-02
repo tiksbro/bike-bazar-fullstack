@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import VehicleCard from './VehicleCard'
+import { VehicleGridSkeleton } from './Skeleton'
 import { getFeatured } from '../services/vehicleService'
 
 function FeaturedBikes() {
@@ -30,26 +31,9 @@ function FeaturedBikes() {
     loadFeatured()
   }, [retryCount])
 
-  if (loading) {
-    return <p className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 text-textmuted">Loading featured bikes...</p>
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
-        <div>
-          <button
-            onClick={() => setRetryCount((c) => c + 1)}
-            className="inline-flex mt-3 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    )
-  }
-
+  // The heading is always shown, even while loading or after an error,
+  // so the Home page keeps its shape. Only the part under the heading
+  // changes: grey placeholder cards, an error box, or the real cards.
   return (
     <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8" style={{ marginTop: 52 }}>
       <div className="flex items-end justify-between">
@@ -60,11 +44,28 @@ function FeaturedBikes() {
         <a href="/vehicles" className="text-sm font-semibold text-accent hover:underline">View All →</a>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
-        {featured.map((vehicle) => (
-          <VehicleCard key={vehicle.id} vehicle={vehicle} variant="featured" />
-        ))}
-      </div>
+      {loading ? (
+        // 4 grey cards in the same grid as the real ones below.
+        <VehicleGridSkeleton count={4} className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5" />
+      ) : error ? (
+        <div className="mt-5">
+          <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
+          <div>
+            <button
+              onClick={() => setRetryCount((c) => c + 1)}
+              className="inline-flex mt-3 bg-accent hover:bg-accenthover transition text-white font-semibold text-sm rounded-btn px-5 py-3"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+          {featured.map((vehicle) => (
+            <VehicleCard key={vehicle.id} vehicle={vehicle} variant="featured" />
+          ))}
+        </div>
+      )}
     </section>
   )
 }

@@ -12,7 +12,6 @@ import Badge, { PriceBadge } from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import { Skeleton } from '../components/Skeleton'
-import { useCompare } from '../context/CompareContext'
 
 const artBackgrounds = {
   orange: 'linear-gradient(160deg,#FDECE0,#F6C79B)',
@@ -489,17 +488,13 @@ function GalleryArrow({ direction, disabled, onClick }) {
 // It sits just above the bottom menu (bottom-16 = 64px, the menu's height).
 // The extra bottom padding (pb-5) keeps the buttons clear of the round
 // "Sell" button, which pokes up out of the bottom menu.
-// If the Compare bar is showing, it moves up again so the two don't overlap.
+// (On phones the Compare bar hides itself on this page, so the two bars
+// never stack. See CompareBar.jsx.)
 function MobileActionBar({ vehicle, contactHref, onMakeOffer }) {
-  const { compareIds } = useCompare()
-  const compareBarShowing = compareIds.length > 0
-
   return (
     <div
       data-sticky-action-bar
-      className={`md:hidden fixed left-0 right-0 z-30 bg-white border-t border-bordercol shadow-pop px-4 pt-3 pb-5 ${
-        compareBarShowing ? 'bottom-[124px]' : 'bottom-16'
-      }`}
+      className="md:hidden fixed left-0 right-0 bottom-16 z-30 bg-white border-t border-bordercol shadow-pop px-4 pt-3 pb-5"
     >
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">

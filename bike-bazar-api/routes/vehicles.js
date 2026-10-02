@@ -8,7 +8,10 @@ const { computePriceInsight, buildPriceInsightGroups, applyPriceInsight } = requ
 const router = express.Router()
 
 const ART_COLORS = ['orange', 'blue', 'graphite', 'teal']
-const REQUIRED_FIELDS = ['brand', 'model', 'year', 'type', 'mileageKm', 'engineCc', 'price', 'location', 'fuelType']
+// Every listing needs these. engineCc and the car fields are checked separately in getMissingFields().
+const REQUIRED_FIELDS = ['brand', 'model', 'year', 'type', 'mileageKm', 'price', 'location', 'fuelType']
+const CAR_REQUIRED_FIELDS = ['transmission', 'seats']
+const VEHICLE_TYPES = ['bike', 'car']
 const FREE_DEALER_LISTING_LIMIT = 5
 const MIN_PHOTOS = 1
 const MAX_PHOTOS = 6
@@ -29,6 +32,37 @@ function getValidPhotos(photos) {
   if (!allPhotosValid) return null
 
   return photos.map((photo) => ({ url: photo.url, publicId: photo.publicId }))
+}
+
+function isEmpty(value) {
+  return value === undefined || value === null || value === ''
+}
+
+// Returns the names of the required fields that are missing for this kind of vehicle.
+function getMissingFields(body, vehicleType) {
+  const fieldsToCheck = [...REQUIRED_FIELDS]
+  // Electric vehicles have no engine, so engineCc is only needed for the others
+  if (body.fuelType !== 'Electric') fieldsToCheck.push('engineCc')
+  if (vehicleType === 'car') fieldsToCheck.push(...CAR_REQUIRED_FIELDS)
+
+  return fieldsToCheck.filter((field) => isEmpty(body[field]))
+}
+
+// Only cars get car fields. For a bike, these come back as undefined, so they are not saved.
+function getCarFields(body, vehicleType) {
+  if (vehicleType !== 'car') return {}
+
+  const carFields = {
+    transmission: body.transmission,
+    seats: body.seats,
+    driveType: isEmpty(body.driveType) ? undefined : body.driveType,
+  }
+  // Battery and range only make sense for electric cars
+  if (body.fuelType === 'Electric') {
+    carFields.batteryKwh = isEmpty(body.batteryKwh) ? undefined : body.batteryKwh
+    carFields.rangeKm = isEmpty(body.rangeKm) ? undefined : body.rangeKm
+  }
+  return carFields
 }
 
 function slugify(text) {
@@ -153,12 +187,22 @@ router.get('/:slug', async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const { brand, model, year, type, mileageKm, engineCc, price, negotiable, location, fuelType, description, photos } = req.body
+    // The current Sell form doesn't send vehicleType yet, so a missing one means 'bike'
+    const vehicleType = isEmpty(req.body.vehicleType) ? 'bike' : req.body.vehicleType
 
-    const missing = REQUIRED_FIELDS.filter(
-      (field) => req.body[field] === undefined || req.body[field] === null || req.body[field] === ''
-    )
+    if (!VEHICLE_TYPES.includes(vehicleType)) {
+      return res.status(400).json({ error: `vehicleType must be one of: ${VEHICLE_TYPES.join(', ')}` })
+    }
+
+    const missing = getMissingFields(req.body, vehicleType)
     if (missing.length > 0) {
       return res.status(400).json({ error: `Missing required fields: ${missing.join(', ')}` })
+    }
+
+    // A bike must be motorcycle/scooter, a car must be hatchback/sedan/suv/muv/pickup
+    const allowedTypes = vehicleType === 'car' ? Vehicle.CAR_TYPES : Vehicle.BIKE_TYPES
+    if (!allowedTypes.includes(type)) {
+      return res.status(400).json({ error: `For a ${vehicleType}, type must be one of: ${allowedTypes.join(', ')}` })
     }
 
     const validPhotos = getValidPhotos(photos)
@@ -181,16 +225,19 @@ router.post('/', requireAuth, async (req, res) => {
 
     const vehicle = new Vehicle({
       slug,
+      vehicleType,
       brand,
       model,
       year,
       type,
       mileageKm,
-      engineCc,
+      // an electric vehicle may send an empty engineCc; store nothing instead of null
+      engineCc: isEmpty(engineCc) ? undefined : engineCc,
       price,
       negotiable,
       location,
       fuelType,
+      ...getCarFields(req.body, vehicleType),
       description,
       featured: false,
       verifiedSeller: false,
@@ -203,6 +250,10 @@ router.post('/', requireAuth, async (req, res) => {
     await vehicle.save()
     res.status(201).json(vehicle)
   } catch (err) {
+    // The model's own rules failed (for example seats: 1). That's a problem with the data sent, so 400, not 500.
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ error: 'Some details are not valid', details: err.message })
+    }
     res.status(500).json({ error: 'Failed to create vehicle', details: err.message })
   }
 })

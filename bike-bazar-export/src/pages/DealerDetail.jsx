@@ -6,6 +6,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import Button from '../components/Button'
 import Badge from '../components/Badge'
 import EmptyState from '../components/EmptyState'
+import { Skeleton, VehicleGridSkeleton } from '../components/Skeleton'
 
 function DealerDetail() {
   const { id } = useParams()
@@ -33,11 +34,7 @@ function DealerDetail() {
   useDocumentTitle(loading ? 'Loading...' : error ? 'Error' : dealer ? dealer.businessName : 'Dealer Not Found')
 
   if (loading) {
-    return (
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-24 text-center">
-        <p className="text-textmuted">Loading dealer...</p>
-      </div>
-    )
+    return <DealerDetailSkeleton />
   }
 
   if (error) {
@@ -103,6 +100,37 @@ function DealerDetail() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// Grey copy of this page: back link, dealer name + city, badge, brand
+// chips, then the "Available Vehicles" heading with 3 grey bike cards.
+function DealerDetailSkeleton() {
+  return (
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8" role="status" aria-label="Loading dealer">
+      <Skeleton className="h-4 w-32" />
+
+      <div className="flex items-start justify-between mt-4 gap-2">
+        <div className="flex-1">
+          <Skeleton className="h-8 w-2/3 sm:w-1/3" />
+          <Skeleton className="h-4 w-24 mt-2" />
+        </div>
+        <Skeleton className="h-6 w-28 rounded-full shrink-0" />
+      </div>
+
+      <div className="flex gap-1.5 mt-4">
+        <Skeleton className="h-6 w-14 rounded-badge" />
+        <Skeleton className="h-6 w-16 rounded-badge" />
+        <Skeleton className="h-6 w-12 rounded-badge" />
+      </div>
+
+      <Skeleton className="h-6 w-48 mt-10" />
+      {/* The grid has its own "Loading vehicles" label; the outer box
+          already says "Loading dealer", so hide this one from screen readers. */}
+      <div aria-hidden="true">
+        <VehicleGridSkeleton count={3} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4" />
+      </div>
     </div>
   )
 }

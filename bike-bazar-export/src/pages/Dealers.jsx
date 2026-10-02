@@ -6,6 +6,7 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import Badge from '../components/Badge'
 import EmptyState from '../components/EmptyState'
+import { Skeleton } from '../components/Skeleton'
 
 function Dealers() {
   useDocumentTitle('Verified Dealers')
@@ -36,7 +37,12 @@ function Dealers() {
       <p className="text-textmuted text-sm mt-1">Browse trusted multi-brand showrooms across Nepal.</p>
 
       {loading ? (
-        <p className="text-textmuted text-sm mt-6">Loading dealers...</p>
+        // 6 grey dealer cards in the same grid as the real ones.
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6" role="status" aria-label="Loading dealers">
+          {Array.from({ length: 6 }, (_, index) => (
+            <DealerCardSkeleton key={index} />
+          ))}
+        </div>
       ) : error ? (
         <Card padding="lg" className="mt-6 text-center">
           <p className="text-sm text-danger bg-dangerbg rounded-ctl px-3 py-2 inline-block">{error}</p>
@@ -86,6 +92,26 @@ function Dealers() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// Grey copy of one dealer card: name + badge, city, a few brand chips,
+// and the "View Dealer" button.
+function DealerCardSkeleton() {
+  return (
+    <div className="bg-white border border-bordersoft rounded-card p-5 shadow-card">
+      <div className="flex items-start justify-between gap-2">
+        <Skeleton className="h-6 w-1/2" />
+        <Skeleton className="h-5 w-16 rounded-full" />
+      </div>
+      <Skeleton className="h-4 w-1/4 mt-2" />
+      <div className="flex gap-1.5 mt-3">
+        <Skeleton className="h-6 w-14 rounded-badge" />
+        <Skeleton className="h-6 w-16 rounded-badge" />
+        <Skeleton className="h-6 w-12 rounded-badge" />
+      </div>
+      <Skeleton className="h-9 w-full mt-4 rounded-btn" />
     </div>
   )
 }

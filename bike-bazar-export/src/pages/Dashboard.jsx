@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import Button from '../components/Button'
 import Card from '../components/Card'
-import Badge from '../components/Badge'
+import Badge, { VehicleTypeBadge } from '../components/Badge'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
 import VehicleArt from '../components/VehicleArt'
@@ -192,7 +192,7 @@ function Dashboard() {
         <StatCard
           label="Sold"
           value={loading ? '–' : soldCount}
-          hint={loading ? '\u00A0' : soldCount === 1 ? '1 bike sold' : `${soldCount} bikes sold`}
+          hint={loading ? '\u00A0' : soldCount === 1 ? '1 vehicle sold' : `${soldCount} vehicles sold`}
         />
         <StatCard label="Total listings" value={loading ? '–' : totalCount} hint={loading ? '\u00A0' : `${boostedCount} boosted`} />
       </div>
@@ -217,7 +217,7 @@ function Dashboard() {
           <div className="mt-4">
             <EmptyState
               title="No offers yet"
-              message="When someone makes an offer on one of your bikes, it will show up here."
+              message="When someone makes an offer on one of your vehicles, it will show up here."
             />
           </div>
         ) : (
@@ -251,7 +251,7 @@ function Dashboard() {
         ) : listings.length === 0 ? (
           <div className="mt-6">
             <EmptyState
-              title="You haven't listed any bikes yet"
+              title="You haven't listed any vehicles yet"
               message="Listing takes about 2 minutes, and you can edit it anytime."
               actionLabel="Sell Your Vehicle"
               actionTo="/sell"
@@ -275,7 +275,9 @@ function Dashboard() {
                         {vehicle.brand} {vehicle.model}
                       </p>
                       <p className="text-sm text-textmuted">Rs. {vehicle.price.toLocaleString('en-IN')}</p>
-                      <div className="flex items-center gap-1.5 mt-1.5">
+                      {/* flex-wrap: on narrow phones the badges go onto a 2nd line instead of overflowing */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <VehicleTypeBadge vehicleType={vehicle.vehicleType} />
                         <Badge variant={s.variant} dot>
                           {s.label}
                         </Badge>
@@ -343,7 +345,7 @@ const artBackgrounds = {
   teal: 'linear-gradient(160deg,#E1F4EE,#A9DCCB)',
 }
 
-// Small picture on each listing row: the cover photo, or the bike drawing for old listings.
+// Small picture on each listing row: the cover photo, or a bike/car drawing for old listings.
 function ListingThumbnail({ vehicle }) {
   const coverPhoto = vehicle.photos?.[0]
   return (
@@ -472,8 +474,9 @@ function OfferCard({ offer, onRespond }) {
     <Card padding="sm" tone={offer.status === 'pending' ? 'attention' : 'default'}>
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="font-display font-semibold">
+          <p className="font-display font-semibold flex flex-wrap items-center gap-2">
             {offer.vehicle.brand} {offer.vehicle.model}
+            <VehicleTypeBadge vehicleType={offer.vehicle.vehicleType} />
           </p>
           <p className="text-sm text-textmuted mt-0.5">
             From {offer.buyer.name} · Rs. {offer.amount.toLocaleString('en-IN')}

@@ -39,12 +39,16 @@ router.post('/:vehicleId', async (req, res) => {
   }
 })
 
+// The vehicle details sent with each offer. vehicleType lets Dashboard and
+// My Offers show a "Bike" or "Car" badge on every offer.
+const OFFER_VEHICLE_FIELDS = 'brand model slug price vehicleType'
+
 // GET /api/offers/received
 router.get('/received', async (req, res) => {
   try {
     const offers = await Offer.find({ seller: req.userId })
       .sort({ createdAt: -1 })
-      .populate('vehicle', 'brand model slug price')
+      .populate('vehicle', OFFER_VEHICLE_FIELDS)
       .populate('buyer', 'name')
     res.json(offers)
   } catch (err) {
@@ -57,7 +61,7 @@ router.get('/sent', async (req, res) => {
   try {
     const offers = await Offer.find({ buyer: req.userId })
       .sort({ createdAt: -1 })
-      .populate('vehicle', 'brand model slug')
+      .populate('vehicle', OFFER_VEHICLE_FIELDS)
     res.json(offers)
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch sent offers', details: err.message })

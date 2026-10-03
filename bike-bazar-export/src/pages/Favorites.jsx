@@ -15,6 +15,17 @@ function HeartIcon() {
   )
 }
 
+// One grid of cards. Used once for everything, or once per group (Cars / Bikes).
+function CardGrid({ vehicles }) {
+  return (
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {vehicles.map((v) => (
+        <VehicleCard key={v.id} vehicle={v} variant="result" />
+      ))}
+    </div>
+  )
+}
+
 function Favorites() {
   const { user } = useAuth()
   const { favoriteIds } = useFavorites()
@@ -47,12 +58,12 @@ function Favorites() {
     }
   }, [favoriteIds, retryCount])
 
-  // When you un-heart a bike on this page, favoriteIds changes at once.
+  // When you un-heart a vehicle on this page, favoriteIds changes at once.
   // Filtering here makes that card disappear straight away, instead of
   // waiting for the reload above to finish.
   const shownVehicles = favoriteVehicles.filter((v) => favoriteIds.includes(v.id))
 
-  // Grey cards only on the FIRST load (nothing on screen yet). When a bike
+  // Grey cards only on the FIRST load (nothing on screen yet). When a vehicle
   // is removed later, the other cards stay put instead of flashing grey.
   const showSkeleton = loading && favoriteVehicles.length === 0
 
@@ -63,7 +74,7 @@ function Favorites() {
       <EmptyState
         icon={<HeartIcon />}
         title="Log in to see your favorites"
-        message="Tap the heart on any bike to save it here, so you can find it again later."
+        message="Tap the heart on any bike or car to save it here, so you can find it again later."
         actionLabel="Log in"
         actionTo="/login"
       />
@@ -84,19 +95,34 @@ function Favorites() {
       <EmptyState
         icon={<HeartIcon />}
         title="No favorites yet"
-        message="Tap the heart on any bike to save it here, so you can find it again later."
+        message="Tap the heart on any bike or car to save it here, so you can find it again later."
         actionLabel="Browse Vehicles"
         actionTo="/vehicles"
       />
     )
   } else {
-    content = (
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {shownVehicles.map((v) => (
-          <VehicleCard key={v.id} vehicle={v} variant="result" />
-        ))}
-      </div>
-    )
+    // Old listings have no vehicleType, so anything that is not 'car' is a bike.
+    const savedCars = shownVehicles.filter((v) => v.vehicleType === 'car')
+    const savedBikes = shownVehicles.filter((v) => v.vehicleType !== 'car')
+
+    if (savedCars.length > 0 && savedBikes.length > 0) {
+      // Both kinds saved: show them in two groups, so bikes and cars don't mix.
+      content = (
+        <div className="flex flex-col gap-8">
+          <section>
+            <GroupHeading title="Cars" count={savedCars.length} />
+            <CardGrid vehicles={savedCars} />
+          </section>
+          <section>
+            <GroupHeading title="Bikes" count={savedBikes.length} />
+            <CardGrid vehicles={savedBikes} />
+          </section>
+        </div>
+      )
+    } else {
+      // Only one kind saved: no group headings needed.
+      content = <CardGrid vehicles={shownVehicles} />
+    }
   }
 
   return (
@@ -109,6 +135,14 @@ function Favorites() {
       )}
       <div className="mt-6">{content}</div>
     </div>
+  )
+}
+
+function GroupHeading({ title, count }) {
+  return (
+    <h2 className="font-display font-bold text-lg mb-3">
+      {title} <span className="font-body font-normal text-sm text-textmuted">({count})</span>
+    </h2>
   )
 }
 

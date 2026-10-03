@@ -20,6 +20,34 @@ const artBackgrounds = {
   teal: 'linear-gradient(160deg,#E1F4EE,#A9DCCB)',
 }
 
+// Nice names for each body type, e.g. 'suv' -> 'SUV'.
+const TYPE_LABELS = {
+  motorcycle: 'Motorcycle',
+  scooter: 'Scooter',
+  hatchback: 'Hatchback',
+  sedan: 'Sedan',
+  suv: 'SUV',
+  muv: 'MUV',
+  pickup: 'Pickup',
+}
+
+function transmissionLabel(transmission) {
+  return transmission === 'automatic' ? 'Automatic' : 'Manual'
+}
+
+// The short line under the name.
+// Bikes: "2022 · 18,000 KM · 155cc · Petrol". Cars add the gearbox: "... · Diesel · Manual".
+function headerSpecs(vehicle) {
+  const parts = [
+    vehicle.year,
+    `${vehicle.mileageKm.toLocaleString()} KM`,
+    vehicle.fuelType !== 'Electric' && `${vehicle.engineCc}cc`,
+    vehicle.fuelType,
+  ]
+  if (vehicle.vehicleType === 'car' && vehicle.transmission) parts.push(transmissionLabel(vehicle.transmission))
+  return parts.filter(Boolean).join(' · ')
+}
+
 function VehicleDetail() {
   const { slug } = useParams()
   const [vehicle, setVehicle] = useState(null)
@@ -90,6 +118,8 @@ function VehicleDetail() {
   }
 
   const healthScore = getHealthScore(vehicle)
+  // Old listings have no vehicleType, so anything that is not 'car' is a bike.
+  const isCar = vehicle.vehicleType === 'car'
 
   // One mailto link shared by the desktop buttons and the phone action bar.
   // It stays null until the seller's email has loaded.
@@ -108,7 +138,7 @@ function VehicleDetail() {
             you scroll the (taller) details column next to it, so there is no
             big empty gap under the picture. self-start stops it stretching. */}
         <div className="md:sticky md:top-24 self-start">
-          {/* New listings show their photos. Old listings have none, so they keep the bike drawing. */}
+          {/* New listings show their photos. Old listings have none, so they show a drawing (bike or car, by type). */}
           {vehicle.photos?.length > 0 ? (
             <PhotoGallery photos={vehicle.photos} title={`${vehicle.brand} ${vehicle.model}`} />
           ) : (
@@ -125,16 +155,7 @@ function VehicleDetail() {
           <h1 className="font-display font-bold text-[26px] sm:text-[30px] leading-tight">
             {vehicle.brand} {vehicle.model}
           </h1>
-          <p className="text-textmuted mt-2">
-            {[
-              vehicle.year,
-              `${vehicle.mileageKm.toLocaleString()} KM`,
-              vehicle.fuelType !== 'Electric' && `${vehicle.engineCc}cc`,
-              vehicle.fuelType,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
+          <p className="text-textmuted mt-2">{headerSpecs(vehicle)}</p>
           <p className="flex items-center gap-1.5 text-textmuted mt-1">
             <PinIcon />
             {vehicle.location}
@@ -207,12 +228,22 @@ function VehicleDetail() {
           <Spec label="Engine" value={vehicle.engineCc ? `${vehicle.engineCc}cc` : '—'} />
           <Spec label="Fuel Type" value={vehicle.fuelType} />
           <Spec label="Location" value={vehicle.location} />
-          <Spec label="Type" value={vehicle.type === 'motorcycle' ? 'Motorcycle' : 'Scooter'} />
+          <Spec label="Type" value={TYPE_LABELS[vehicle.type] || vehicle.type} />
+          {/* Car-only specs. Optional ones only show when the seller filled them in. */}
+          {isCar && (
+            <>
+              <Spec label="Transmission" value={transmissionLabel(vehicle.transmission)} />
+              <Spec label="Seats" value={vehicle.seats} />
+              {vehicle.driveType && <Spec label="Drive Type" value={vehicle.driveType} />}
+              {vehicle.batteryKwh > 0 && <Spec label="Battery" value={`${vehicle.batteryKwh} kWh`} />}
+              {vehicle.rangeKm > 0 && <Spec label="Range" value={`${vehicle.rangeKm.toLocaleString()} km`} />}
+            </>
+          )}
         </div>
       </section>
 
       <section className="mt-12">
-        <SectionHeading>Bike Health Score</SectionHeading>
+        <SectionHeading>{isCar ? 'Car' : 'Bike'} Health Score</SectionHeading>
         <Card className="flex flex-col sm:flex-row gap-6 items-center sm:items-start mt-4">
           <HealthScoreGauge score={healthScore.overall} />
           <HealthScoreBreakdown items={[

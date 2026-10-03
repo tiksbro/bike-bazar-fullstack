@@ -99,19 +99,90 @@ export async function getSimilar(vehicle, limit = 3) {
     .slice(0, limit)
 }
 
-export function getHealthScore(vehicle) {
-  const age = new Date().getFullYear() - vehicle.year
+// ---- Health Score ----
+// A rough "condition estimate" made only from the listing details (no mechanic
+// has looked at the vehicle). Bikes and cars wear out at very different speeds,
+// so each has its own formula. Both return the same shape:
+//   { overall: 72, parts: [{ label: 'Engine', score: 77 }, ...] }
+// VehicleDetail and Compare just show whatever parts come back.
+
+// Keeps a part score between a floor and a ceiling (never 0, never a perfect 100).
+function clampScore(score, min = 30, max = 98) {
+  return Math.round(Math.min(max, Math.max(min, score)))
+}
+
+function getBikeHealthScore(vehicle, age) {
+  // A bike loses 1 point per 500 km (25,000 km -> 50) and 6 points per year.
   const kmFactor = Math.max(0, 100 - vehicle.mileageKm / 500)
   const ageFactor = Math.max(0, 100 - age * 6)
-  const overall = Math.round((kmFactor + ageFactor) / 2)
-  const clamped = Math.min(98, Math.max(35, overall))
+  const overall = clampScore((kmFactor + ageFactor) / 2, 35)
 
   return {
-    overall: clamped,
-    engine: Math.min(98, clamped + 5),
-    brakes: Math.min(95, clamped),
-    tyres: Math.max(30, clamped - 15),
-    electrical: Math.min(97, clamped + 8),
-    documents: 95,
+    overall,
+    parts: [
+      { label: 'Engine', score: Math.min(98, overall + 5) },
+      { label: 'Brakes', score: Math.min(95, overall) },
+      { label: 'Tyres', score: Math.max(30, overall - 15) },
+      { label: 'Electrical', score: Math.min(97, overall + 8) },
+      { label: 'Documents', score: 95 },
+    ],
   }
+}
+
+function getCarHealthScore(vehicle, age) {
+  const km = vehicle.mileageKm
+  const isElectric = vehicle.fuelType === 'Electric'
+  // Hybrids and electric cars slow down using the motor ("regenerative
+  // braking"), so their brake pads wear out more slowly.
+  const hasRegenBraking = isElectric || vehicle.fuelType === 'Hybrid'
+
+  // A car is built to run much longer than a bike: it loses 1 point per
+  // 2,000 km (100,000 km -> 50) and 5 points per year (10 years -> 50).
+  const kmFactor = Math.max(0, 100 - km / 2000)
+  const ageFactor = Math.max(0, 100 - age * 5)
+  let base = (kmFactor + ageFactor) / 2
+
+  // Driven a lot every year (more than 15,000 km a year, e.g. a taxi)?
+  // Hard use wears everything a bit faster.
+  const kmPerYear = km / Math.max(1, age)
+  if (kmPerYear > 15000) base -= 5
+
+  const parts = []
+
+  if (isElectric) {
+    // No engine or gearbox. The battery slowly holds less charge with
+    // every year and every charge.
+    parts.push({ label: 'Battery', score: clampScore(100 - age * 4 - km / 4000) })
+  } else {
+    // Diesel engines are built for long distances, so they get a small bonus.
+    const dieselBonus = vehicle.fuelType === 'Diesel' ? 3 : 0
+    parts.push({ label: 'Engine', score: clampScore(base + 5 + dieselBonus) })
+    // A manual gearbox has a clutch plate that wears out with use.
+    const clutchWear = vehicle.transmission === 'manual' ? 3 : 0
+    parts.push({ label: 'Gearbox', score: clampScore(base - clutchWear) })
+  }
+
+  // 7+ seat cars carry more weight, and 4WD cars are often taken off-road.
+  const heavyLoad = vehicle.seats >= 7 ? 5 : 0
+  const offRoad = vehicle.driveType === '4WD' ? 5 : 0
+  parts.push({ label: 'Suspension', score: clampScore(base - heavyLoad - offRoad) })
+  parts.push({ label: 'Brakes', score: clampScore(base + (hasRegenBraking ? 5 : 0)) })
+  parts.push({ label: 'Tyres', score: clampScore(base - 15) })
+  parts.push({ label: 'Electrical', score: clampScore(base + 5) })
+
+  // The overall score is the average of the condition parts above.
+  // Documents is added after, so it doesn't push the overall score up.
+  const total = parts.reduce((sum, part) => sum + part.score, 0)
+  const overall = clampScore(total / parts.length, 35)
+  parts.push({ label: 'Documents', score: 95 })
+
+  return { overall, parts }
+}
+
+export function getHealthScore(vehicle) {
+  // Never below 0, even if someone typed next year as the model year.
+  const age = Math.max(0, new Date().getFullYear() - vehicle.year)
+  // Old listings have no vehicleType, so anything that is not 'car' is a bike.
+  if (vehicle.vehicleType === 'car') return getCarHealthScore(vehicle, age)
+  return getBikeHealthScore(vehicle, age)
 }

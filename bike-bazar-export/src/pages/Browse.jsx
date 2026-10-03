@@ -30,6 +30,10 @@ const typeLabels = {
   pickup: 'Pickup',
 }
 
+// Fuel choices per tab. Bikes only come in Petrol or Electric.
+const bikeFuelTypes = ['Petrol', 'Electric']
+const fuelLabels = { '': 'All', Petrol: 'Petrol', Electric: 'Electric' }
+
 // Car-only filter choices.
 const carFuelTypes = ['Petrol', 'Diesel', 'Electric', 'Hybrid']
 const transmissionLabels = { '': 'All', manual: 'Manual', automatic: 'Automatic' }
@@ -41,7 +45,7 @@ const vehicleWords = {
   car: { one: 'car', many: 'cars', sell: 'Sell Your Car' },
 }
 
-// fuelType, transmission and seats are only used on the Cars tab.
+// fuelType is used on both tabs; transmission and seats only on the Cars tab.
 const emptyFilters = {
   q: '', brand: '', type: '', location: '', minPrice: '', maxPrice: '', sortBy: '',
   fuelType: '', transmission: '', seats: '',
@@ -113,7 +117,7 @@ function SelectField({ id, value, onChange, isActive, children }) {
 }
 
 // A joined row of buttons where only one can be picked
-// (used for bike Type and car Transmission).
+// (used for bike Type, bike Fuel and car Transmission).
 //   options  the values, '' means "All"
 //   labels   what each value says on screen
 function SegmentedChoice({ labelId, options, labels, value, onChange }) {
@@ -157,7 +161,8 @@ function filtersFromUrl(searchParams, vehicle) {
     location: searchParams.get('location') || '',
     minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : '',
     maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : '',
-    fuelType: isCar && carFuelTypes.includes(fuelType) ? fuelType : '',
+    // e.g. the Home page "Electric" card links to /vehicles?fuelType=Electric
+    fuelType: (isCar ? carFuelTypes : bikeFuelTypes).includes(fuelType) ? fuelType : '',
     transmission: isCar && ['manual', 'automatic'].includes(transmission) ? transmission : '',
     seats: isCar && seatOptions.includes(Number(seats)) ? seats : '',
   }
@@ -169,8 +174,8 @@ function filtersFromUrl(searchParams, vehicle) {
 // `idPrefix` keeps the two copies' ids different ("desktop-brand" vs
 // "mobile-brand"), because two elements on one page must never share an id.
 // The Bikes tab and the Cars tab share Search, Brand, Location and Sort.
-// Bikes get the Motorcycle/Scooter switch. Cars get Body type, Fuel,
-// Transmission and Seats instead.
+// Bikes get the Motorcycle/Scooter switch and a Petrol/Electric switch.
+// Cars get Body type, Fuel (4 kinds), Transmission and Seats instead.
 function FilterFields({ vehicle, brands, filters, updateFilter, idPrefix }) {
   const labelClasses = 'text-[13px] font-semibold text-textbody block mb-1.5'
   const isCar = vehicle === 'car'
@@ -245,6 +250,19 @@ function FilterFields({ vehicle, brands, filters, updateFilter, idPrefix }) {
           ))}
         </SelectField>
       </div>
+
+      {!isCar && (
+        <div>
+          <span id={`${idPrefix}-fuel-label`} className={labelClasses}>Fuel</span>
+          <SegmentedChoice
+            labelId={`${idPrefix}-fuel-label`}
+            options={['', ...bikeFuelTypes]}
+            labels={fuelLabels}
+            value={filters.fuelType}
+            onChange={(f) => updateFilter('fuelType', f)}
+          />
+        </div>
+      )}
 
       {isCar && (
         <>

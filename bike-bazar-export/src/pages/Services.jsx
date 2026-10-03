@@ -14,7 +14,9 @@ function Services() {
       setLoading(true)
       setError('')
       try {
-        const data = await listVehicles()
+        // 'all' = bikes AND cars. With no argument, listVehicles only
+        // returns bikes (that's the Browse default), which hid every car here.
+        const data = await listVehicles({ vehicle: 'all' })
         setVehicles(data)
       } catch {
         setError("Couldn't load vehicles. Check your connection and try again.")
@@ -24,6 +26,11 @@ function Services() {
     }
     loadVehicles()
   }, [retryCount])
+
+  // Split the list in two for the dropdown. Old listings have no
+  // vehicleType, so anything that isn't 'car' counts as a bike.
+  const bikes = vehicles.filter((v) => v.vehicleType !== 'car')
+  const cars = vehicles.filter((v) => v.vehicleType === 'car')
 
   function handleRequestInspection(e) {
     e.preventDefault()
@@ -66,14 +73,23 @@ function Services() {
               value={selectedVehicleId}
               onChange={(e) => setSelectedVehicleId(e.target.value)}
               disabled={loading}
+              aria-label="Vehicle to inspect"
               className="flex-1 border border-bordercol rounded-ctl px-3 py-2 text-sm"
             >
               <option value="">{loading ? 'Loading vehicles...' : 'Select a vehicle'}</option>
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.brand} {v.model} — {v.location}
-                </option>
-              ))}
+              {/* <optgroup> puts a grey "Bikes" / "Cars" heading inside the
+                  dropdown. A group with nothing in it is left out. */}
+              {[['Bikes', bikes], ['Cars', cars]].map(([groupName, list]) =>
+                list.length > 0 && (
+                  <optgroup key={groupName} label={groupName}>
+                    {list.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.brand} {v.model} — {v.location}
+                      </option>
+                    ))}
+                  </optgroup>
+                )
+              )}
             </select>
             <button
               type="submit"

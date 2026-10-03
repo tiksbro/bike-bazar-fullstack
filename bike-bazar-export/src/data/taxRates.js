@@ -132,3 +132,147 @@ export const taxRates = {
     '400cc & Above': 12500,
   },
 }
+
+// ---------------------------------------------------------------------
+// CARS (added in Car Plan Phase 7)
+// ---------------------------------------------------------------------
+// Cars are taxed in two different ways:
+//   - Petrol, Diesel and Hybrid cars: by engine size (cc), like bikes.
+//   - Electric cars: they have no engine cc, so by motor power (kW).
+// The numbers follow the general shape of the real Bagmati car tax
+// table, and the other provinces are scaled from it. They are still
+// estimates for this demo — not official Government of Nepal rates.
+
+// Engine size groups for Petrol / Diesel / Hybrid cars, smallest first.
+export const carCcBands = [
+  'Upto 1000cc',
+  '1001-1500cc',
+  '1501-2000cc',
+  '2001-2500cc',
+  '2501-3000cc',
+  '3001-3500cc',
+  'Above 3500cc',
+]
+
+// Motor power groups for Electric cars, smallest first.
+export const carPowerBands = [
+  'Upto 50 kW',
+  '51-125 kW',
+  '126-200 kW',
+  'Above 200 kW',
+]
+
+// Yearly tax in Rs. for Petrol / Diesel / Hybrid cars,
+// keyed by [province][carCcBand]. Estimates only.
+export const carTaxRates = {
+  Koshi: {
+    'Upto 1000cc': 19500,
+    '1001-1500cc': 22000,
+    '1501-2000cc': 24000,
+    '2001-2500cc': 32500,
+    '2501-3000cc': 44000,
+    '3001-3500cc': 53000,
+    'Above 3500cc': 61500,
+  },
+  Madhesh: {
+    'Upto 1000cc': 18000,
+    '1001-1500cc': 20500,
+    '1501-2000cc': 22000,
+    '2001-2500cc': 30500,
+    '2501-3000cc': 41000,
+    '3001-3500cc': 49000,
+    'Above 3500cc': 57500,
+  },
+  Bagmati: {
+    'Upto 1000cc': 22000,
+    '1001-1500cc': 25000,
+    '1501-2000cc': 27000,
+    '2001-2500cc': 37000,
+    '2501-3000cc': 50000,
+    '3001-3500cc': 60000,
+    'Above 3500cc': 70000,
+  },
+  Gandaki: {
+    'Upto 1000cc': 20000,
+    '1001-1500cc': 23000,
+    '1501-2000cc': 25000,
+    '2001-2500cc': 34000,
+    '2501-3000cc': 46000,
+    '3001-3500cc': 55000,
+    'Above 3500cc': 64500,
+  },
+  Lumbini: {
+    'Upto 1000cc': 19500,
+    '1001-1500cc': 22000,
+    '1501-2000cc': 24000,
+    '2001-2500cc': 32500,
+    '2501-3000cc': 44000,
+    '3001-3500cc': 53000,
+    'Above 3500cc': 61500,
+  },
+  Karnali: {
+    'Upto 1000cc': 16500,
+    '1001-1500cc': 19000,
+    '1501-2000cc': 20000,
+    '2001-2500cc': 28000,
+    '2501-3000cc': 37500,
+    '3001-3500cc': 45000,
+    'Above 3500cc': 52500,
+  },
+  Sudurpashchim: {
+    'Upto 1000cc': 17000,
+    '1001-1500cc': 19500,
+    '1501-2000cc': 21000,
+    '2001-2500cc': 29000,
+    '2501-3000cc': 39000,
+    '3001-3500cc': 47000,
+    'Above 3500cc': 54500,
+  },
+}
+
+// Yearly tax in Rs. for Electric cars,
+// keyed by [province][carPowerBand]. Estimates only.
+export const carEvTaxRates = {
+  Koshi: {
+    'Upto 50 kW': 4500,
+    '51-125 kW': 13000,
+    '126-200 kW': 17500,
+    'Above 200 kW': 26500,
+  },
+  Madhesh: {
+    'Upto 50 kW': 4000,
+    '51-125 kW': 12500,
+    '126-200 kW': 16500,
+    'Above 200 kW': 24500,
+  },
+  Bagmati: {
+    'Upto 50 kW': 5000,
+    '51-125 kW': 15000,
+    '126-200 kW': 20000,
+    'Above 200 kW': 30000,
+  },
+  Gandaki: {
+    'Upto 50 kW': 4500,
+    '51-125 kW': 14000,
+    '126-200 kW': 18500,
+    'Above 200 kW': 27500,
+  },
+  Lumbini: {
+    'Upto 50 kW': 4500,
+    '51-125 kW': 13000,
+    '126-200 kW': 17500,
+    'Above 200 kW': 26500,
+  },
+  Karnali: {
+    'Upto 50 kW': 4000,
+    '51-125 kW': 11000,
+    '126-200 kW': 15000,
+    'Above 200 kW': 22500,
+  },
+  Sudurpashchim: {
+    'Upto 50 kW': 4000,
+    '51-125 kW': 11500,
+    '126-200 kW': 15500,
+    'Above 200 kW': 23500,
+  },
+}

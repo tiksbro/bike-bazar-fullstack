@@ -67,6 +67,8 @@ function CompareButton({ comparing, onToggle, className = '' }) {
 
 function VehicleCard({ vehicle, variant = 'result' }) {
   const { isFavorite, toggleFavorite } = useFavorites()
+  // toggleCompare gets the whole vehicle (not just its id), so it can
+  // tell bikes and cars apart and stop them being mixed.
   const { isComparing, toggleCompare } = useCompare()
 
   const favorited = isFavorite(vehicle.id)
@@ -165,7 +167,7 @@ function VehicleCard({ vehicle, variant = 'result' }) {
             <PriceBadge insight={vehicle.priceInsight} className="shrink-0" />
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <CompareButton comparing={comparing} onToggle={() => toggleCompare(vehicle.id)} />
+            <CompareButton comparing={comparing} onToggle={() => toggleCompare(vehicle)} />
             <span className="flex-1 text-center bg-sunken text-ink text-[13px] font-semibold rounded-btn py-2">
               View Details
             </span>
@@ -194,7 +196,7 @@ function VehicleCard({ vehicle, variant = 'result' }) {
           </p>
 
           <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-bordersoft">
-            <CompareButton comparing={comparing} onToggle={() => toggleCompare(vehicle.id)} />
+            <CompareButton comparing={comparing} onToggle={() => toggleCompare(vehicle)} />
             <PriceBadge insight={vehicle.priceInsight} />
           </div>
         </div>

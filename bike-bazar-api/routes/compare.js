@@ -54,10 +54,8 @@ router.post('/:vehicleId', async (req, res) => {
     const newKind = kindOf(vehicle)
     const differentVehicle = listed.find((v) => kindOf(v) !== newKind)
     if (differentVehicle) {
-      const listedKind = kindOf(differentVehicle)
-      const listedLabel = listedKind === 'car' ? 'Cars' : 'Bikes'
       return res.status(400).json({
-        error: `Your compare list has ${listedKind}s. ${listedLabel} can only be compared with ${listedKind}s, so clear the list first to compare ${newKind}s.`,
+        error: `Your compare list has ${kindOf(differentVehicle)}s. Clear it first to compare ${newKind}s.`,
         // A short code the frontend can check, instead of matching the text above.
         code: 'COMPARE_TYPE_MISMATCH',
       })

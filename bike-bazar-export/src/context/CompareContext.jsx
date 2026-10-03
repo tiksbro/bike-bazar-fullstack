@@ -79,10 +79,7 @@ export function CompareProvider({ children }) {
     if (!alreadyComparing) {
       const differentItem = compareItems.find((item) => item.kind !== kind)
       if (differentItem) {
-        const listedLabel = differentItem.kind === 'car' ? 'Cars' : 'Bikes'
-        showMixError(
-          `Your compare list has ${differentItem.kind}s. ${listedLabel} can only be compared with ${differentItem.kind}s, so clear the list first to compare ${kind}s.`
-        )
+        showMixError(`Your compare list has ${differentItem.kind}s. Clear it first to compare ${kind}s.`)
         return
       }
     }

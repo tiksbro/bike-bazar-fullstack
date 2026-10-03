@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import { useAuth } from '../context/AuthContext'
-import Badge from '../components/Badge'
+import Badge, { VehicleTypeBadge } from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import EmptyState from '../components/EmptyState'
@@ -83,7 +83,7 @@ function MyOffers() {
         <div className="mt-6">
           <EmptyState
             title="You haven't made any offers yet"
-            message="Found a bike you like? Open it and tap Make an Offer."
+            message="Found a bike or car you like? Open it and tap Make an Offer."
             actionLabel="Browse Vehicles"
             actionTo="/vehicles"
           />
@@ -143,8 +143,9 @@ function MyOfferCard({ offer }) {
     <Card padding="sm">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="font-display font-semibold">
+          <p className="font-display font-semibold flex flex-wrap items-center gap-2">
             {offer.vehicle.brand} {offer.vehicle.model}
+            <VehicleTypeBadge vehicleType={offer.vehicle.vehicleType} />
           </p>
           <p className="text-sm text-textmuted mt-0.5">Your offer: Rs. {offer.amount.toLocaleString('en-IN')}</p>
           {offer.status === 'countered' && (

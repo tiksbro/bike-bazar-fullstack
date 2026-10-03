@@ -41,4 +41,16 @@ export function PriceBadge({ insight, className = '' }) {
   )
 }
 
+// The small "Bike" / "Car" badge, used on Dashboard, Favorites and My Offers
+// so a list that mixes bikes and cars is easy to read.
+// Old listings were made before cars existed and have no vehicleType, so they count as bikes.
+export function VehicleTypeBadge({ vehicleType, className = '' }) {
+  const isCar = vehicleType === 'car'
+  return (
+    <Badge variant={isCar ? 'info' : 'neutral'} className={className}>
+      {isCar ? 'Car' : 'Bike'}
+    </Badge>
+  )
+}
+
 export default Badge

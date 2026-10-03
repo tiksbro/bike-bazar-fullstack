@@ -13,7 +13,43 @@ const steps = ['Vehicle Info', 'Price & Condition', 'Location', 'Photos', 'Revie
 
 const currentYear = new Date().getFullYear()
 
+// Body types for each kind of vehicle. The values match the backend
+// (bike-bazar-api/models/Vehicle.js BIKE_TYPES and CAR_TYPES).
+const BIKE_TYPES = [
+  { value: 'motorcycle', label: 'Motorcycle' },
+  { value: 'scooter', label: 'Scooter' },
+]
+const CAR_TYPES = [
+  { value: 'hatchback', label: 'Hatchback' },
+  { value: 'sedan', label: 'Sedan' },
+  { value: 'suv', label: 'SUV' },
+  { value: 'muv', label: 'MUV' },
+  { value: 'pickup', label: 'Pickup' },
+]
+
+// Bikes are only Petrol or Electric. Cars can also be Diesel or Hybrid.
+const FUEL_TYPES = {
+  bike: ['Petrol', 'Electric'],
+  car: ['Petrol', 'Diesel', 'Electric', 'Hybrid'],
+}
+
+const TRANSMISSIONS = [
+  { value: 'manual', label: 'Manual' },
+  { value: 'automatic', label: 'Automatic' },
+]
+
+// Same limits as the backend (seats: min 2, max 12).
+const MIN_SEATS = 2
+const MAX_SEATS = 12
+
+// Example values shown inside empty boxes, so the person knows what to type.
+const EXAMPLES = {
+  bike: { brand: 'Yamaha', model: 'R15 V3', km: '18000', cc: '155', price: '320000' },
+  car: { brand: 'Hyundai', model: 'i20', km: '45000', cc: '1197', price: '2800000' },
+}
+
 const emptyForm = {
+  vehicleType: 'bike', // 'bike' or 'car'
   brand: '',
   model: '',
   year: '',
@@ -25,6 +61,13 @@ const emptyForm = {
   negotiable: true,
   location: '',
   description: '',
+  // Car-only fields. Bikes leave these empty and they are never sent.
+  transmission: '',
+  seats: '',
+  driveType: '',
+  // Electric cars only, both optional.
+  batteryKwh: '',
+  rangeKm: '',
 }
 
 const DESCRIPTION_LIMIT = 500
@@ -50,25 +93,55 @@ function formatPrice(value) {
   return Number(value || 0).toLocaleString('en-IN')
 }
 
+// Turns 'suv' into 'SUV', 'motorcycle' into 'Motorcycle', and so on.
+function getTypeLabel(type) {
+  const match = [...BIKE_TYPES, ...CAR_TYPES].find((option) => option.value === type)
+  return match ? match.label : type
+}
+
+function isCar(form) {
+  return form.vehicleType === 'car'
+}
+
+function isElectric(form) {
+  return form.fuelType === 'Electric'
+}
+
 // Checks ONE step and returns an object of error messages.
 // An empty object {} means the step is fine.
 function validateStep(stepNumber, form, photos) {
   const errors = {}
 
   if (stepNumber === 1) {
-    if (!form.brand.trim()) errors.brand = 'Enter the brand, like Yamaha.'
-    if (!form.model.trim()) errors.model = 'Enter the model, like R15 V3.'
+    if (!form.brand.trim()) errors.brand = `Enter the brand, like ${EXAMPLES[form.vehicleType].brand}.`
+    if (!form.model.trim()) errors.model = `Enter the model, like ${EXAMPLES[form.vehicleType].model}.`
     const year = Number(form.year)
     if (!form.year) errors.year = 'Enter the year it was made.'
     else if (year < 1980 || year > currentYear + 1) errors.year = `Year must be between 1980 and ${currentYear + 1}.`
+
+    if (isCar(form)) {
+      if (!form.transmission) errors.transmission = 'Pick Manual or Automatic.'
+      const seats = Number(form.seats)
+      if (!form.seats) errors.seats = 'Enter how many seats it has.'
+      else if (!Number.isInteger(seats) || seats < MIN_SEATS || seats > MAX_SEATS) {
+        errors.seats = `Seats must be a whole number from ${MIN_SEATS} to ${MAX_SEATS}.`
+      }
+    }
   }
 
   if (stepNumber === 2) {
     if (form.mileageKm === '') errors.mileageKm = 'Enter how many KM it has run.'
     else if (Number(form.mileageKm) < 0) errors.mileageKm = 'KM cannot be negative.'
-    // The backend needs engineCc for every listing, so it is required here too.
-    if (!form.engineCc) errors.engineCc = 'Enter the engine size in cc.'
-    else if (Number(form.engineCc) <= 0) errors.engineCc = 'Engine size must be more than 0.'
+    // Electric vehicles have no engine, so engine size is only needed for the others.
+    if (!isElectric(form)) {
+      if (!form.engineCc) errors.engineCc = 'Enter the engine size in cc.'
+      else if (Number(form.engineCc) <= 0) errors.engineCc = 'Engine size must be more than 0.'
+    }
+    // Battery and range are optional, but if typed in they must make sense.
+    if (isCar(form) && isElectric(form)) {
+      if (form.batteryKwh !== '' && Number(form.batteryKwh) <= 0) errors.batteryKwh = 'Battery size must be more than 0.'
+      if (form.rangeKm !== '' && Number(form.rangeKm) <= 0) errors.rangeKm = 'Range must be more than 0.'
+    }
     if (!form.price) errors.price = 'Enter your asking price.'
     else if (Number(form.price) < 1000) errors.price = 'Price looks too low. Enter the full amount in rupees.'
   }
@@ -82,6 +155,40 @@ function validateStep(stepNumber, form, photos) {
   }
 
   return errors
+}
+
+// Builds the listing we send to the backend. It only includes the fields
+// that make sense for this vehicle: no engine size for electric vehicles,
+// no car fields for bikes, and battery/range only for electric cars.
+function buildListingData(form, uploadedPhotos) {
+  const listing = {
+    vehicleType: form.vehicleType,
+    type: form.type,
+    brand: form.brand.trim(),
+    model: form.model.trim(),
+    year: Number(form.year),
+    mileageKm: Number(form.mileageKm),
+    fuelType: form.fuelType,
+    price: Number(form.price),
+    negotiable: form.negotiable,
+    location: form.location,
+    description: form.description.trim(),
+    photos: uploadedPhotos,
+  }
+
+  if (!isElectric(form)) listing.engineCc = Number(form.engineCc)
+
+  if (isCar(form)) {
+    listing.transmission = form.transmission
+    listing.seats = Number(form.seats)
+    if (form.driveType) listing.driveType = form.driveType
+    if (isElectric(form)) {
+      if (form.batteryKwh !== '') listing.batteryKwh = Number(form.batteryKwh)
+      if (form.rangeKm !== '') listing.rangeKm = Number(form.rangeKm)
+    }
+  }
+
+  return listing
 }
 
 function Sell() {
@@ -101,13 +208,29 @@ function Sell() {
   // 'Uploading photos...' or 'Publishing...' while the Publish button is busy.
   const [submitLabel, setSubmitLabel] = useState('')
 
+  // Removes the error messages of the given boxes (if they have one).
+  function clearErrors(...fields) {
+    const remaining = { ...errors }
+    fields.forEach((field) => delete remaining[field])
+    setErrors(remaining)
+  }
+
   function updateField(field, value) {
     setFormData({ ...formData, [field]: value })
     // Once they fix a box, remove that box's error message.
-    if (errors[field]) {
-      const { [field]: _removed, ...rest } = errors
-      setErrors(rest)
-    }
+    // Changing the fuel can hide the engine / battery / range boxes, so clear those errors too.
+    if (field === 'fuelType') clearErrors('fuelType', 'engineCc', 'batteryKwh', 'rangeKm')
+    else if (errors[field]) clearErrors(field)
+  }
+
+  // Switches between Bike and Car. The body type jumps to the first one in
+  // the new list (a car can't be a 'scooter'), and a bike can't stay Diesel or Hybrid.
+  function chooseVehicleType(vehicleType) {
+    if (vehicleType === formData.vehicleType) return
+    const firstType = vehicleType === 'car' ? CAR_TYPES[0].value : BIKE_TYPES[0].value
+    const fuelType = FUEL_TYPES[vehicleType].includes(formData.fuelType) ? formData.fuelType : 'Petrol'
+    setFormData({ ...formData, vehicleType, type: firstType, fuelType })
+    setErrors({})
   }
 
   // Adds newly picked files, after checking type, size and the 6-photo limit.
@@ -193,16 +316,7 @@ function Sell() {
 
       // 2. Then create the listing, with those photo links inside it.
       setSubmitLabel('Publishing...')
-      await createVehicle(
-        {
-          ...formData,
-          brand: formData.brand.trim(),
-          model: formData.model.trim(),
-          description: formData.description.trim(),
-          photos: uploadedPhotos,
-        },
-        token
-      )
+      await createVehicle(buildListingData(formData, uploadedPhotos), token)
       setPublished(true)
     } catch (err) {
       setSubmitError(err.message)
@@ -276,7 +390,14 @@ function Sell() {
 
       <div className="grid lg:grid-cols-[1fr_340px] gap-6 mt-6 items-start">
         <Card padding="none" className="p-5 sm:p-6">
-          {step === 1 && <VehicleInfoStep formData={formData} errors={errors} updateField={updateField} />}
+          {step === 1 && (
+            <VehicleInfoStep
+              formData={formData}
+              errors={errors}
+              updateField={updateField}
+              onChooseVehicleType={chooseVehicleType}
+            />
+          )}
           {step === 2 && <PriceStep formData={formData} errors={errors} updateField={updateField} />}
           {step === 3 && <LocationStep formData={formData} errors={errors} updateField={updateField} />}
           {step === 4 && (
@@ -388,16 +509,54 @@ function Stepper({ step, onStepClick }) {
 }
 
 // ---------- Step 1 ----------
-function VehicleInfoStep({ formData, errors, updateField }) {
+function VehicleInfoStep({ formData, errors, updateField, onChooseVehicleType }) {
+  const example = EXAMPLES[formData.vehicleType]
   return (
     <div>
       <StepHeading title="Tell us about your vehicle" subtitle="Start with the basics buyers search for." />
 
-      <p className="text-sm font-semibold mb-2">Vehicle type</p>
+      {/* First choice: Bike or Car. Everything below changes to match it. */}
+      <p className="text-sm font-semibold mb-2">What are you selling?</p>
       <div className="grid grid-cols-2 gap-3">
-        <TypeTile type="motorcycle" label="Motorcycle" selected={formData.type === 'motorcycle'} onSelect={updateField} />
-        <TypeTile type="scooter" label="Scooter" selected={formData.type === 'scooter'} onSelect={updateField} />
+        <PictureTile label="Bike" selected={formData.vehicleType === 'bike'} onSelect={() => onChooseVehicleType('bike')}>
+          <VehicleArt type="motorcycle" />
+        </PictureTile>
+        <PictureTile label="Car" selected={formData.vehicleType === 'car'} onSelect={() => onChooseVehicleType('car')}>
+          <CarDrawing />
+        </PictureTile>
       </div>
+
+      {isCar(formData) ? (
+        <>
+          <p className="text-sm font-semibold mt-6 mb-2">Body type</p>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2" role="group" aria-label="Body type">
+            {CAR_TYPES.map((option) => (
+              <ChoiceButton
+                key={option.value}
+                label={option.label}
+                selected={formData.type === option.value}
+                onSelect={() => updateField('type', option.value)}
+              />
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="text-sm font-semibold mt-6 mb-2">Bike type</p>
+          <div className="grid grid-cols-2 gap-3">
+            {BIKE_TYPES.map((option) => (
+              <PictureTile
+                key={option.value}
+                label={option.label}
+                selected={formData.type === option.value}
+                onSelect={() => updateField('type', option.value)}
+              >
+                <VehicleArt type={option.value} />
+              </PictureTile>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-4 mt-6">
         <Field label="Brand" id="brand" error={errors.brand}>
@@ -406,7 +565,7 @@ function VehicleInfoStep({ formData, errors, updateField }) {
             value={formData.brand}
             onChange={(e) => updateField('brand', e.target.value)}
             className={inputClasses(errors.brand)}
-            placeholder="e.g. Yamaha"
+            placeholder={`e.g. ${example.brand}`}
           />
         </Field>
         <Field label="Model" id="model" error={errors.model}>
@@ -415,7 +574,7 @@ function VehicleInfoStep({ formData, errors, updateField }) {
             value={formData.model}
             onChange={(e) => updateField('model', e.target.value)}
             className={inputClasses(errors.model)}
-            placeholder="e.g. R15 V3"
+            placeholder={`e.g. ${example.model}`}
           />
         </Field>
         <Field label="Year" id="year" error={errors.year}>
@@ -429,25 +588,63 @@ function VehicleInfoStep({ formData, errors, updateField }) {
             placeholder={`e.g. ${currentYear - 2}`}
           />
         </Field>
+        {isCar(formData) && (
+          <Field label="Seats" id="seats" error={errors.seats}>
+            <input
+              id="seats"
+              type="number"
+              inputMode="numeric"
+              min={MIN_SEATS}
+              max={MAX_SEATS}
+              value={formData.seats}
+              onChange={(e) => updateField('seats', e.target.value)}
+              className={inputClasses(errors.seats)}
+              placeholder="e.g. 5"
+            />
+          </Field>
+        )}
       </div>
+
+      {isCar(formData) && (
+        <div className="grid sm:grid-cols-2 gap-4 mt-5">
+          <ToggleGroup
+            label="Transmission"
+            id="transmission"
+            options={TRANSMISSIONS}
+            value={formData.transmission}
+            onChange={(value) => updateField('transmission', value)}
+            error={errors.transmission}
+          />
+          <Field label="Drive type (optional)" id="driveType">
+            <select
+              id="driveType"
+              value={formData.driveType}
+              onChange={(e) => updateField('driveType', e.target.value)}
+              className={inputClasses(false)}
+            >
+              <option value="">Not sure</option>
+              <option value="2WD">2WD</option>
+              <option value="4WD">4WD</option>
+            </select>
+          </Field>
+        </div>
+      )}
     </div>
   )
 }
 
-// A big clickable box with a bike drawing, used to pick Motorcycle or Scooter.
-function TypeTile({ type, label, selected, onSelect }) {
+// A big clickable box with a drawing, used for Bike / Car and Motorcycle / Scooter.
+function PictureTile({ label, selected, onSelect, children }) {
   return (
     <button
       type="button"
-      onClick={() => onSelect('type', type)}
+      onClick={onSelect}
       aria-pressed={selected}
       className={`relative rounded-cardsm border-2 p-3 text-left transition ${
         selected ? 'border-accent bg-accentsoftbg' : 'border-bordercol bg-white hover:border-borderstrong'
       }`}
     >
-      <div className="relative h-16 sm:h-20">
-        <VehicleArt type={type} />
-      </div>
+      <div className="relative h-16 sm:h-20">{children}</div>
       <span className="flex items-center justify-between mt-2">
         <span className={`text-sm font-semibold ${selected ? 'text-accentsofttext' : 'text-ink'}`}>{label}</span>
         {selected && (
@@ -460,13 +657,45 @@ function TypeTile({ type, label, selected, onSelect }) {
   )
 }
 
+// A small text-only button, used for the 5 car body types.
+function ChoiceButton({ label, selected, onSelect }) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={`rounded-ctl border-2 px-2 py-2.5 text-sm font-semibold transition ${
+        selected
+          ? 'border-accent bg-accentsoftbg text-accentsofttext'
+          : 'border-bordercol bg-white text-ink hover:border-borderstrong'
+      }`}
+    >
+      {label}
+    </button>
+  )
+}
+
 // ---------- Step 2 ----------
 function PriceStep({ formData, errors, updateField }) {
+  const example = EXAMPLES[formData.vehicleType]
+  const fuelOptions = FUEL_TYPES[formData.vehicleType].map((fuel) => ({ value: fuel, label: fuel }))
+  const showBatteryAndRange = isCar(formData) && isElectric(formData)
+
   return (
     <div>
       <StepHeading title="Price and condition" subtitle="Honest details help you sell faster." />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+      {/* Fuel comes first, because it decides which boxes come next
+          (electric vehicles have no engine size). */}
+      <ToggleGroup
+        label="Fuel type"
+        id="fuelType"
+        options={fuelOptions}
+        value={formData.fuelType}
+        onChange={(value) => updateField('fuelType', value)}
+      />
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-5">
         <Field label="KM driven" id="mileageKm" error={errors.mileageKm}>
           <input
             id="mileageKm"
@@ -475,38 +704,50 @@ function PriceStep({ formData, errors, updateField }) {
             value={formData.mileageKm}
             onChange={(e) => updateField('mileageKm', e.target.value)}
             className={inputClasses(errors.mileageKm)}
-            placeholder="e.g. 18000"
+            placeholder={`e.g. ${example.km}`}
           />
         </Field>
-        <Field label="Engine (cc)" id="engineCc" error={errors.engineCc}>
-          <input
-            id="engineCc"
-            type="number"
-            inputMode="numeric"
-            value={formData.engineCc}
-            onChange={(e) => updateField('engineCc', e.target.value)}
-            className={inputClasses(errors.engineCc)}
-            placeholder="e.g. 155"
-          />
-        </Field>
+        {!isElectric(formData) && (
+          <Field label="Engine (cc)" id="engineCc" error={errors.engineCc}>
+            <input
+              id="engineCc"
+              type="number"
+              inputMode="numeric"
+              value={formData.engineCc}
+              onChange={(e) => updateField('engineCc', e.target.value)}
+              className={inputClasses(errors.engineCc)}
+              placeholder={`e.g. ${example.cc}`}
+            />
+          </Field>
+        )}
       </div>
 
-      <p className="text-sm font-semibold mt-5 mb-1.5">Fuel type</p>
-      <div className="inline-flex bg-sunken rounded-ctl p-1" role="group" aria-label="Fuel type">
-        {['Petrol', 'Electric'].map((fuel) => (
-          <button
-            key={fuel}
-            type="button"
-            onClick={() => updateField('fuelType', fuel)}
-            aria-pressed={formData.fuelType === fuel}
-            className={`px-5 py-2.5 sm:px-4 sm:py-1.5 text-sm font-semibold rounded-[7px] transition ${
-              formData.fuelType === fuel ? 'bg-white text-ink shadow-card' : 'text-textmuted hover:text-ink'
-            }`}
-          >
-            {fuel}
-          </button>
-        ))}
-      </div>
+      {showBatteryAndRange && (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-5">
+          <Field label="Battery (kWh)" id="batteryKwh" error={errors.batteryKwh} hint="Optional">
+            <input
+              id="batteryKwh"
+              type="number"
+              inputMode="decimal"
+              value={formData.batteryKwh}
+              onChange={(e) => updateField('batteryKwh', e.target.value)}
+              className={inputClasses(errors.batteryKwh)}
+              placeholder="e.g. 39.2"
+            />
+          </Field>
+          <Field label="Range (km)" id="rangeKm" error={errors.rangeKm} hint="Optional, on a full charge">
+            <input
+              id="rangeKm"
+              type="number"
+              inputMode="numeric"
+              value={formData.rangeKm}
+              onChange={(e) => updateField('rangeKm', e.target.value)}
+              className={inputClasses(errors.rangeKm)}
+              placeholder="e.g. 450"
+            />
+          </Field>
+        </div>
+      )}
 
       <div className="mt-5">
         <Field
@@ -524,7 +765,7 @@ function PriceStep({ formData, errors, updateField }) {
               value={formData.price}
               onChange={(e) => updateField('price', e.target.value)}
               className={`${inputClasses(errors.price)} pl-11`}
-              placeholder="320000"
+              placeholder={example.price}
             />
           </div>
         </Field>
@@ -696,6 +937,8 @@ function PhotosStep({ photos, error, onAdd, onRemove, onMakeCover }) {
 
 // ---------- Step 5 ----------
 function ReviewStep({ formData, photos, onEdit }) {
+  const car = isCar(formData)
+  const electric = isElectric(formData)
   return (
     <div>
       <StepHeading title="Check your listing" subtitle="Make sure everything is right before you publish." />
@@ -722,15 +965,29 @@ function ReviewStep({ formData, photos, onEdit }) {
             />
           </ReviewSection>
           <ReviewSection title="Vehicle Info" onEdit={() => onEdit(1)}>
-            <ReviewRow label="Type" value={formData.type === 'scooter' ? 'Scooter' : 'Motorcycle'} />
+            <ReviewRow label="Vehicle" value={car ? 'Car' : 'Bike'} />
+            <ReviewRow label="Type" value={getTypeLabel(formData.type)} />
             <ReviewRow label="Brand" value={formData.brand} />
             <ReviewRow label="Model" value={formData.model} />
             <ReviewRow label="Year" value={formData.year} />
+            {car && (
+              <>
+                <ReviewRow label="Seats" value={formData.seats} />
+                <ReviewRow label="Transmission" value={formData.transmission === 'automatic' ? 'Automatic' : 'Manual'} />
+                <ReviewRow label="Drive type" value={formData.driveType || 'Not given'} />
+              </>
+            )}
           </ReviewSection>
           <ReviewSection title="Price & Condition" onEdit={() => onEdit(2)}>
-            <ReviewRow label="KM driven" value={`${formatPrice(formData.mileageKm)} KM`} />
-            <ReviewRow label="Engine" value={`${formData.engineCc} cc`} />
             <ReviewRow label="Fuel" value={formData.fuelType} />
+            <ReviewRow label="KM driven" value={`${formatPrice(formData.mileageKm)} KM`} />
+            {!electric && <ReviewRow label="Engine" value={`${formData.engineCc} cc`} />}
+            {car && electric && (
+              <>
+                <ReviewRow label="Battery" value={formData.batteryKwh !== '' ? `${formData.batteryKwh} kWh` : 'Not given'} />
+                <ReviewRow label="Range" value={formData.rangeKm !== '' ? `${formatPrice(formData.rangeKm)} km` : 'Not given'} />
+              </>
+            )}
             <ReviewRow
               label="Price"
               value={`Rs. ${formatPrice(formData.price)} (${formData.negotiable ? 'Negotiable' : 'Fixed'})`}
@@ -774,7 +1031,7 @@ function ReviewRow({ label, value }) {
 }
 
 // ---------- The card that shows how the listing will look ----------
-// coverUrl is the first photo's preview. Without a photo we show the bike drawing.
+// coverUrl is the first photo's preview. Without a photo we show a drawing.
 function ListingPreview({ formData, coverUrl }) {
   const title = `${formData.brand} ${formData.model}`.trim() || 'Your vehicle'
   const details = [formData.year, formData.mileageKm !== '' ? `${formatPrice(formData.mileageKm)} KM` : '']
@@ -786,6 +1043,8 @@ function ListingPreview({ formData, coverUrl }) {
       <div className="relative h-40 bg-linear-to-br from-accentsoftbg to-sunken">
         {coverUrl ? (
           <img src={coverUrl} alt="Cover photo" className="absolute inset-0 w-full h-full object-cover" />
+        ) : isCar(formData) ? (
+          <CarDrawing />
         ) : (
           <VehicleArt type={formData.type} />
         )}
@@ -832,6 +1091,68 @@ function Field({ label, id, error, hint, children }) {
         hint && <p className="text-xs text-textfaint mt-1.5">{hint}</p>
       )}
     </div>
+  )
+}
+
+// A row of buttons where only one can be picked (like Petrol / Electric).
+// With 4 options it shows 2 per row on phones, so the buttons never squeeze.
+function ToggleGroup({ label, id, options, value, onChange, error }) {
+  const columns = options.length > 2 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'
+  return (
+    <div>
+      <p className="text-sm font-semibold mb-1.5">{label}</p>
+      <div
+        id={id}
+        role="group"
+        aria-label={label}
+        className={`grid ${columns} gap-1 sm:inline-grid bg-sunken rounded-ctl p-1 w-full sm:w-auto ${
+          error ? 'ring-1 ring-danger' : ''
+        }`}
+      >
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={value === option.value}
+            className={`px-5 py-2.5 sm:px-4 sm:py-1.5 text-sm font-semibold rounded-[7px] transition ${
+              value === option.value ? 'bg-white text-ink shadow-card' : 'text-textmuted hover:text-ink'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {error && <p className="text-xs text-danger mt-1.5">{error}</p>}
+    </div>
+  )
+}
+
+// A simple car drawing, sized like VehicleArt so it fits the same boxes.
+// Temporary: Phase 4 adds proper car drawings to components/VehicleArt.jsx,
+// and then this page can use VehicleArt for cars too.
+function CarDrawing() {
+  return (
+    <svg viewBox="0 0 400 240" className="absolute inset-0 w-full h-full" aria-hidden="true">
+      <ellipse cx="200" cy="208" rx="165" ry="9" fill="#0E1116" opacity="0.14" />
+      <path
+        d="M40 170 Q36 140 66 134 L128 126 L166 92 Q178 82 196 82 L266 82 Q284 82 296 94 L328 126 L346 130 Q366 136 364 170 Z"
+        fill="#2B5BE3"
+      />
+      <path d="M150 124 L178 98 Q184 92 194 92 L230 92 L230 124 Z" fill="#CFE0F5" />
+      <path d="M242 92 L264 92 Q276 92 284 100 L308 124 L242 124 Z" fill="#CFE0F5" />
+      <path d="M236 92 L236 166" stroke="#1E43AB" strokeWidth="3" />
+      <path d="M70 146 L360 146" stroke="#FFFFFF" strokeOpacity="0.3" strokeWidth="4" strokeLinecap="round" />
+      <rect x="348" y="138" width="14" height="10" rx="4" fill="#FFF6D0" stroke="#E2C25A" strokeWidth="2" />
+      <rect x="40" y="140" width="10" height="12" rx="3" fill="#E5432E" />
+      {[112, 292].map((cx) => (
+        <g key={cx}>
+          <circle cx={cx} cy="170" r="32" fill="#15181E" />
+          <circle cx={cx} cy="170" r="18" fill="#9AA3B2" />
+          <circle cx={cx} cy="170" r="6" fill="#2B303A" />
+        </g>
+      ))}
+    </svg>
   )
 }
 

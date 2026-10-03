@@ -11,19 +11,33 @@ export async function getFeatured() {
   return all.filter((v) => v.featured)
 }
 
+// Bikes are the default. Pass { vehicle: 'car' } for cars, or { vehicle: 'all' } for both.
+// (Phase 5 will add the Bikes / Cars tabs on Browse that set `vehicle`.)
 export async function listVehicles(filters = {}) {
-  
   const params = new URLSearchParams()
+  const vehicle = filters.vehicle || 'bike'
+  if (vehicle !== 'all') params.set('vehicle', vehicle)
   if (filters.q) params.set('q', filters.q)
   if (filters.brand) params.set('brand', filters.brand)
   if (filters.type) params.set('type', filters.type)
   if (filters.location) params.set('location', filters.location)
+  if (filters.fuelType) params.set('fuelType', filters.fuelType)
+  // transmission and seats are car-only filters
+  if (filters.transmission) params.set('transmission', filters.transmission)
+  if (filters.seats) params.set('seats', filters.seats)
   if (filters.minPrice) params.set('minPrice', filters.minPrice)
   if (filters.maxPrice) params.set('maxPrice', filters.maxPrice)
   if (filters.sortBy) params.set('sortBy', filters.sortBy)
 
   const res = await fetch(`${API_URL}/vehicles?${params.toString()}`)
   if (!res.ok) throw new Error('Failed to fetch vehicles')
+  return res.json()
+}
+
+// The brand list for one tab, A to Z, e.g. ['Bajaj', 'Honda', ...] for bikes.
+export async function getBrands(vehicle = 'bike') {
+  const res = await fetch(`${API_URL}/vehicles/brands?vehicle=${vehicle}`)
+  if (!res.ok) throw new Error('Failed to fetch brands')
   return res.json()
 }
 
@@ -77,8 +91,11 @@ export async function getByIds(ids) {
 
 export async function getSimilar(vehicle, limit = 3) {
   const all = await fetchAllVehicles()
+  // A listing with no vehicleType counts as a bike
+  const sameKind = (v) => (v.vehicleType || 'bike') === (vehicle.vehicleType || 'bike')
+  // "Similar" means the same kind (bike or car) AND the same brand or type
   return all
-    .filter((v) => v.id !== vehicle.id && (v.brand === vehicle.brand || v.type === vehicle.type))
+    .filter((v) => v.id !== vehicle.id && sameKind(v) && (v.brand === vehicle.brand || v.type === vehicle.type))
     .slice(0, limit)
 }
 

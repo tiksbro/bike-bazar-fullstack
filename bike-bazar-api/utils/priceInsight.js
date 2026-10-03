@@ -14,11 +14,18 @@ function insightFromAverage(price, averagePrice) {
   return 'fair'
 }
 
+// A listing saved before cars existed may have no vehicleType, so it counts as a bike.
+function getVehicleType(vehicle) {
+  return vehicle.vehicleType || 'bike'
+}
+
 // Used for a single vehicle (e.g. GET /:slug) — queries the comparable
 // listings directly since it's just one extra query for one vehicle.
+// Only the same kind of vehicle counts: a car is never compared with a bike.
 async function computePriceInsight(vehicle) {
   const comparables = await Vehicle.find({
     _id: { $ne: vehicle._id },
+    vehicleType: getVehicleType(vehicle),
     brand: new RegExp(`^${escapeRegex(vehicle.brand)}$`, 'i'),
     model: new RegExp(`^${escapeRegex(vehicle.model)}$`, 'i'),
   }).select('price')
@@ -30,13 +37,18 @@ async function computePriceInsight(vehicle) {
 }
 
 // Used for a list of vehicles (e.g. GET /) — a single aggregation groups
-// EVERY vehicle in the database by brand+model to get each group's total
-// price and count in one pass, instead of querying per vehicle (N+1).
+// EVERY vehicle in the database by vehicleType+brand+model to get each group's
+// total price and count in one pass, instead of querying per vehicle (N+1).
 async function buildPriceInsightGroups() {
   const groups = await Vehicle.aggregate([
     {
       $group: {
-        _id: { brand: { $toLower: '$brand' }, model: { $toLower: '$model' } },
+        _id: {
+          // $ifNull: a listing with no vehicleType goes in the 'bike' group
+          vehicleType: { $ifNull: ['$vehicleType', 'bike'] },
+          brand: { $toLower: '$brand' },
+          model: { $toLower: '$model' },
+        },
         totalPrice: { $sum: '$price' },
         count: { $sum: 1 },
       },
@@ -45,16 +57,20 @@ async function buildPriceInsightGroups() {
 
   const groupMap = new Map()
   for (const g of groups) {
-    groupMap.set(`${g._id.brand}|${g._id.model}`, { totalPrice: g.totalPrice, count: g.count })
+    groupMap.set(groupKey(g._id.vehicleType, g._id.brand, g._id.model), { totalPrice: g.totalPrice, count: g.count })
   }
   return groupMap
+}
+
+// The name of a group in the map, e.g. "car|hyundai|i20". Both functions use it, so they always match.
+function groupKey(vehicleType, brand, model) {
+  return `${vehicleType}|${brand.toLowerCase()}|${model.toLowerCase()}`
 }
 
 // Applies the precomputed groups to one vehicle, excluding the vehicle
 // itself from the group's total/count before averaging.
 function applyPriceInsight(vehicle, groupMap) {
-  const key = `${vehicle.brand.toLowerCase()}|${vehicle.model.toLowerCase()}`
-  const group = groupMap.get(key)
+  const group = groupMap.get(groupKey(getVehicleType(vehicle), vehicle.brand, vehicle.model))
   if (!group) return 'fair'
 
   const otherCount = group.count - 1

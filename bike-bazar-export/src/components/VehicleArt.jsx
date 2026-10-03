@@ -1,6 +1,7 @@
-// The bike drawings shown on vehicle cards and the detail page.
-// The bike body color follows the listing's artColor, so a grid of
-// bikes doesn't look like the same picture repeated.
+// The vehicle drawings shown on vehicle cards and the detail page.
+// Bikes: motorcycle and scooter. Cars: hatchback, sedan, suv, muv and pickup.
+// The body color follows the listing's artColor, so a grid of
+// vehicles doesn't look like the same picture repeated.
 const palettes = {
   orange: { body: '#E4572E', dark: '#B23C1C' },
   blue: { body: '#2B5BE3', dark: '#1E43AB' },
@@ -36,9 +37,95 @@ function Wheel({ cx, cy, r }) {
   )
 }
 
+// ---------- Cars ----------
+const CAR_TYPES = ['hatchback', 'sedan', 'suv', 'muv', 'pickup']
+
+// A car wheel: tyre, silver rim and a small hub (no spokes like the bike wheel).
+function CarWheel({ cx, cy, r }) {
+  return (
+    <g>
+      <circle cx={cx} cy={cy} r={r} fill="#15181E" />
+      <circle cx={cx} cy={cy} r={r * 0.62} fill="#AEB6C4" />
+      <circle cx={cx} cy={cy} r={r * 0.5} fill="none" stroke="#8E97A6" strokeWidth="3" />
+      <circle cx={cx} cy={cy} r={r * 0.2} fill="#2B303A" />
+    </g>
+  )
+}
+
+// Each car shape is described by a few numbers and SVG paths:
+// body = the painted outline, windows = the glass, wheels = where the wheels go.
+const carShapes = {
+  hatchback: {
+    body: 'M60 176 L60 130 Q60 120 72 116 L98 86 Q104 80 114 80 L236 80 Q252 80 264 92 L300 122 L328 128 Q350 134 348 176 Z',
+    windows: ['M84 116 L106 92 Q110 88 118 88 L190 88 L190 116 Z', 'M200 88 L236 88 Q248 88 256 96 L280 116 L200 116 Z'],
+    doorX: 195,
+    wheels: [{ cx: 120, r: 30 }, { cx: 290, r: 30 }],
+    lights: { front: 336, back: 60 },
+  },
+  sedan: {
+    body: 'M36 176 Q32 140 62 134 L124 126 L162 92 Q174 82 192 82 L258 82 Q276 82 288 94 L322 126 L346 130 Q368 136 366 176 Z',
+    windows: ['M146 124 L174 98 Q180 92 190 92 L226 92 L226 124 Z', 'M236 92 L258 92 Q270 92 278 100 L302 124 L236 124 Z'],
+    doorX: 231,
+    wheels: [{ cx: 108, r: 30 }, { cx: 296, r: 30 }],
+    lights: { front: 352, back: 38 },
+  },
+  suv: {
+    body: 'M40 178 L40 128 Q40 118 52 116 L92 112 L118 70 Q124 62 136 62 L276 62 Q290 62 298 72 L326 110 L350 114 Q364 118 364 132 L364 178 Z',
+    windows: ['M104 110 L126 74 Q130 70 138 70 L196 70 L196 110 Z', 'M206 70 L272 70 Q282 70 288 78 L312 110 L206 110 Z'],
+    doorX: 201,
+    wheels: [{ cx: 110, r: 35 }, { cx: 296, r: 35 }],
+    lights: { front: 352, back: 42 },
+  },
+  muv: {
+    body: 'M34 178 L34 84 Q34 70 50 68 L272 66 Q288 66 298 78 L328 112 L352 116 Q366 120 366 134 L366 178 Z',
+    windows: ['M46 110 L46 82 Q46 76 54 76 L120 76 L120 110 Z', 'M130 76 L210 76 L210 110 L130 110 Z', 'M220 76 L268 76 Q280 76 288 86 L310 110 L220 110 Z'],
+    doorX: 215,
+    wheels: [{ cx: 104, r: 33 }, { cx: 298, r: 33 }],
+    lights: { front: 354, back: 36 },
+  },
+  pickup: {
+    body: 'M34 178 L34 118 L176 118 L176 78 Q176 66 190 66 L262 66 Q276 66 286 78 L314 112 L346 116 Q364 120 364 136 L364 178 Z',
+    windows: ['M188 108 L188 80 Q188 74 196 74 L258 74 Q268 74 276 84 L298 108 Z'],
+    doorX: 240,
+    wheels: [{ cx: 102, r: 33 }, { cx: 298, r: 33 }],
+    lights: { front: 352, back: 36 },
+  },
+}
+
+function CarArt({ type, body, dark }) {
+  const shape = carShapes[type]
+  return (
+    <svg viewBox="0 0 400 240" className="absolute inset-0 w-full h-full" aria-hidden="true">
+      <ellipse cx="200" cy="212" rx="165" ry="9" fill="#0E1116" opacity="0.14" />
+      <path d={shape.body} fill={body} />
+      {shape.windows.map((d) => (
+        <path key={d} d={d} fill="#CFE0F5" />
+      ))}
+      {/* Door line, and a light stripe along the side to give some shine */}
+      <path d={`M${shape.doorX} 120 L${shape.doorX} 168`} stroke={dark} strokeWidth="3" />
+      <path d="M60 146 L344 146" stroke="#FFFFFF" strokeOpacity="0.3" strokeWidth="4" strokeLinecap="round" />
+      {/* Pickup only: the open cargo bed at the back */}
+      {type === 'pickup' && <rect x="42" y="118" width="128" height="8" rx="3" fill={dark} />}
+      <rect x={shape.lights.front} y="134" width="14" height="10" rx="4" fill="#FFF6D0" stroke="#E2C25A" strokeWidth="2" />
+      <rect x={shape.lights.back} y="134" width="8" height="12" rx="3" fill="#E5432E" />
+      <rect x="30" y="168" width="340" height="10" rx="5" fill={dark} />
+      {shape.wheels.map((wheel) => (
+        <CarWheel key={wheel.cx} cx={wheel.cx} cy={176} r={wheel.r} />
+      ))}
+    </svg>
+  )
+}
+
 function VehicleArt({ type, color }) {
-  const key = color && palettes[color] ? color : type === 'scooter' ? 'teal' : 'orange'
+  const isCar = CAR_TYPES.includes(type)
+  // No color given? Scooters are teal, cars blue, motorcycles orange.
+  const defaultColor = type === 'scooter' ? 'teal' : isCar ? 'blue' : 'orange'
+  const key = color && palettes[color] ? color : defaultColor
   const { body, dark } = palettes[key]
+
+  if (isCar) {
+    return <CarArt type={type} body={body} dark={dark} />
+  }
 
   if (type === 'scooter') {
     return (

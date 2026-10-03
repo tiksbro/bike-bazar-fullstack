@@ -24,15 +24,21 @@ function PinIcon() {
   )
 }
 
-// "2023 · 5,200 KM · 150cc" (the cc part is skipped for electric bikes).
+// The short specs line under the name.
+// Bikes: "2023 · 5,200 KM · 150cc" (the cc part is skipped for electric bikes).
+// Cars:  "2021 · 45,000 KM · Diesel · Auto". For cars the gearbox matters more
+// to buyers than the cc, and the fuel is only shown when it is not Petrol.
 function specsText(vehicle) {
-  return [
-    vehicle.year,
-    `${vehicle.mileageKm.toLocaleString()} KM`,
-    vehicle.fuelType !== 'Electric' && `${vehicle.engineCc}cc`,
-  ]
-    .filter(Boolean)
-    .join(' · ')
+  const parts = [vehicle.year, `${vehicle.mileageKm.toLocaleString()} KM`]
+
+  if (vehicle.vehicleType === 'car') {
+    if (vehicle.fuelType !== 'Petrol') parts.push(vehicle.fuelType)
+    if (vehicle.transmission) parts.push(vehicle.transmission === 'automatic' ? 'Auto' : 'Manual')
+  } else if (vehicle.fuelType !== 'Electric') {
+    parts.push(`${vehicle.engineCc}cc`)
+  }
+
+  return parts.filter(Boolean).join(' · ')
 }
 
 // The "+ Compare" pill. Pulled out into its own small component because
@@ -76,12 +82,12 @@ function VehicleCard({ vehicle, variant = 'result' }) {
       className="group relative flex flex-col h-full bg-white border border-bordersoft rounded-card overflow-hidden shadow-card transition duration-200 hover:shadow-cardhover hover:-translate-y-1 hover:border-bordercol"
     >
       {/* Image area: still full width on phones, just a little shorter
-          (170px instead of 200px) so the bike stays big and clear. */}
+          (170px instead of 200px) so the vehicle stays big and clear. */}
       <div
         className={`relative ${isCompactOnPhone ? 'h-[170px] sm:h-[200px]' : 'h-[200px]'}`}
         style={{ background: artBackgrounds[vehicle.artColor] }}
       >
-        {/* New listings have photos; old ones don't, so they keep the bike drawing. */}
+        {/* New listings have photos; old ones don't, so they show a drawing (bike or car, by type). */}
         {coverPhoto ? (
           <VehiclePhoto
             photo={coverPhoto}

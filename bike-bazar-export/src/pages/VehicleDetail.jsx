@@ -246,13 +246,14 @@ function VehicleDetail() {
         <SectionHeading>{isCar ? 'Car' : 'Bike'} Health Score</SectionHeading>
         <Card className="flex flex-col sm:flex-row gap-6 items-center sm:items-start mt-4">
           <HealthScoreGauge score={healthScore.overall} />
-          <HealthScoreBreakdown items={[
-            { label: 'Engine', score: healthScore.engine },
-            { label: 'Brakes', score: healthScore.brakes },
-            { label: 'Tyres', score: healthScore.tyres },
-            { label: 'Electrical', score: healthScore.electrical },
-            { label: 'Documents', score: healthScore.documents },
-          ]} />
+          {/* Bikes and cars have different parts (a car has a Gearbox and
+              Suspension, an electric car has a Battery), so we show whatever
+              list getHealthScore gives back instead of fixed names.
+              The wrapper is full width on phones: without it, the list
+              shrank to the size of its text and the bars had no room. */}
+          <div className="w-full sm:flex-1">
+            <HealthScoreBreakdown items={healthScore.parts} />
+          </div>
         </Card>
         <p className="text-xs text-textfaint mt-2">
           This is a platform estimate based on listing details, not a professional mechanical inspection.

@@ -34,6 +34,11 @@ function getValidPhotos(photos) {
   return photos.map((photo) => ({ url: photo.url, publicId: photo.publicId }))
 }
 
+// Makes symbols like ( ) . + in a search box count as normal letters
+function escapeRegex(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 function isEmpty(value) {
   return value === undefined || value === null || value === ''
 }
@@ -88,19 +93,32 @@ async function generateUniqueSlug(brand, model, year) {
 }
 
 // GET /api/vehicles
+// Optional filters in the URL, for example:
+//   /api/vehicles?vehicle=car&fuelType=Diesel&transmission=automatic&seats=7
+// With no `vehicle`, bikes AND cars both come back (Favorites/Compare need that).
 router.get('/', async (req, res) => {
   try {
-    const { q, brand, type, location, minPrice, maxPrice, sortBy } = req.query
+    const { q, vehicle, brand, type, location, fuelType, transmission, seats, minPrice, maxPrice, sortBy } = req.query
+
+    if (vehicle && !VEHICLE_TYPES.includes(vehicle)) {
+      return res.status(400).json({ error: `vehicle must be one of: ${VEHICLE_TYPES.join(', ')}` })
+    }
 
     const filter = {}
 
     if (q) {
-      const regex = new RegExp(q, 'i')
+      // escapeRegex stops a search like "R15 (V3)" from crashing the regex
+      const regex = new RegExp(escapeRegex(q), 'i')
       filter.$or = [{ brand: regex }, { model: regex }]
     }
+    if (vehicle) filter.vehicleType = vehicle
     if (brand) filter.brand = brand
     if (type) filter.type = type
     if (location) filter.location = location
+    if (fuelType) filter.fuelType = fuelType
+    // transmission and seats only exist on cars, so these two only ever match cars
+    if (transmission) filter.transmission = transmission
+    if (seats) filter.seats = Number(seats)
     if (minPrice || maxPrice) {
       filter.price = {}
       if (minPrice) filter.price.$gte = Number(minPrice)
@@ -125,6 +143,25 @@ router.get('/', async (req, res) => {
   }
 })
 
+// GET /api/vehicles/brands?vehicle=car
+// The brand list for one tab, A to Z, taken from real listings.
+// So the Cars tab shows Hyundai, Suzuki... and the Bikes tab shows Yamaha, Bajaj...
+router.get('/brands', async (req, res) => {
+  try {
+    const vehicle = isEmpty(req.query.vehicle) ? 'bike' : req.query.vehicle
+    if (!VEHICLE_TYPES.includes(vehicle)) {
+      return res.status(400).json({ error: `vehicle must be one of: ${VEHICLE_TYPES.join(', ')}` })
+    }
+
+    const brands = await Vehicle.distinct('brand', { vehicleType: vehicle })
+    brands.sort((a, b) => a.localeCompare(b))
+
+    res.json(brands)
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch brands', details: err.message })
+  }
+})
+
 // GET /api/vehicles/mine/list
 router.get('/mine/list', requireAuth, async (req, res) => {
   try {
@@ -136,15 +173,19 @@ router.get('/mine/list', requireAuth, async (req, res) => {
 })
 
 // GET /api/vehicles/stats/categories
+// motorcycles, scooters and electric are BIKE counts (the Home page cards already use them).
+// cars and electricCars are new, for the Cars side of the site.
 router.get('/stats/categories', async (req, res) => {
   try {
-    const [motorcycles, scooters, electric] = await Promise.all([
-      Vehicle.countDocuments({ type: 'motorcycle' }),
-      Vehicle.countDocuments({ type: 'scooter' }),
-      Vehicle.countDocuments({ fuelType: 'Electric' }),
+    const [motorcycles, scooters, electric, cars, electricCars] = await Promise.all([
+      Vehicle.countDocuments({ vehicleType: 'bike', type: 'motorcycle' }),
+      Vehicle.countDocuments({ vehicleType: 'bike', type: 'scooter' }),
+      Vehicle.countDocuments({ vehicleType: 'bike', fuelType: 'Electric' }),
+      Vehicle.countDocuments({ vehicleType: 'car' }),
+      Vehicle.countDocuments({ vehicleType: 'car', fuelType: 'Electric' }),
     ])
 
-    res.json({ motorcycles, scooters, electric })
+    res.json({ motorcycles, scooters, electric, cars, electricCars })
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch category stats', details: err.message })
   }

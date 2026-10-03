@@ -522,7 +522,7 @@ function VehicleInfoStep({ formData, errors, updateField, onChooseVehicleType })
           <VehicleArt type="motorcycle" />
         </PictureTile>
         <PictureTile label="Car" selected={formData.vehicleType === 'car'} onSelect={() => onChooseVehicleType('car')}>
-          <CarDrawing />
+          <VehicleArt type="hatchback" color="blue" />
         </PictureTile>
       </div>
 
@@ -1031,7 +1031,8 @@ function ReviewRow({ label, value }) {
 }
 
 // ---------- The card that shows how the listing will look ----------
-// coverUrl is the first photo's preview. Without a photo we show a drawing.
+// coverUrl is the first photo's preview. Without a photo we show a drawing of the
+// chosen type (VehicleArt draws bikes and cars).
 function ListingPreview({ formData, coverUrl }) {
   const title = `${formData.brand} ${formData.model}`.trim() || 'Your vehicle'
   const details = [formData.year, formData.mileageKm !== '' ? `${formatPrice(formData.mileageKm)} KM` : '']
@@ -1043,8 +1044,6 @@ function ListingPreview({ formData, coverUrl }) {
       <div className="relative h-40 bg-linear-to-br from-accentsoftbg to-sunken">
         {coverUrl ? (
           <img src={coverUrl} alt="Cover photo" className="absolute inset-0 w-full h-full object-cover" />
-        ) : isCar(formData) ? (
-          <CarDrawing />
         ) : (
           <VehicleArt type={formData.type} />
         )}
@@ -1125,34 +1124,6 @@ function ToggleGroup({ label, id, options, value, onChange, error }) {
       </div>
       {error && <p className="text-xs text-danger mt-1.5">{error}</p>}
     </div>
-  )
-}
-
-// A simple car drawing, sized like VehicleArt so it fits the same boxes.
-// Temporary: Phase 4 adds proper car drawings to components/VehicleArt.jsx,
-// and then this page can use VehicleArt for cars too.
-function CarDrawing() {
-  return (
-    <svg viewBox="0 0 400 240" className="absolute inset-0 w-full h-full" aria-hidden="true">
-      <ellipse cx="200" cy="208" rx="165" ry="9" fill="#0E1116" opacity="0.14" />
-      <path
-        d="M40 170 Q36 140 66 134 L128 126 L166 92 Q178 82 196 82 L266 82 Q284 82 296 94 L328 126 L346 130 Q366 136 364 170 Z"
-        fill="#2B5BE3"
-      />
-      <path d="M150 124 L178 98 Q184 92 194 92 L230 92 L230 124 Z" fill="#CFE0F5" />
-      <path d="M242 92 L264 92 Q276 92 284 100 L308 124 L242 124 Z" fill="#CFE0F5" />
-      <path d="M236 92 L236 166" stroke="#1E43AB" strokeWidth="3" />
-      <path d="M70 146 L360 146" stroke="#FFFFFF" strokeOpacity="0.3" strokeWidth="4" strokeLinecap="round" />
-      <rect x="348" y="138" width="14" height="10" rx="4" fill="#FFF6D0" stroke="#E2C25A" strokeWidth="2" />
-      <rect x="40" y="140" width="10" height="12" rx="3" fill="#E5432E" />
-      {[112, 292].map((cx) => (
-        <g key={cx}>
-          <circle cx={cx} cy="170" r="32" fill="#15181E" />
-          <circle cx={cx} cy="170" r="18" fill="#9AA3B2" />
-          <circle cx={cx} cy="170" r="6" fill="#2B303A" />
-        </g>
-      ))}
-    </svg>
   )
 }
 

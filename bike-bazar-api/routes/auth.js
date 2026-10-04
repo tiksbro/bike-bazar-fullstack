@@ -16,13 +16,17 @@ function generateToken(user) {
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role, businessName, city, brands } = req.body
+    const { name, email, password, role, businessName, city, brands, acceptTerms } = req.body
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'name, email and password are required' })
     }
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' })
+    }
+    // Must be the real boolean true, not the text "true" or anything else.
+    if (acceptTerms !== true) {
+      return res.status(400).json({ error: 'You must accept the Terms of Use and Privacy Policy' })
     }
 
     const normalizedRole = role === 'dealer' ? 'dealer' : 'buyer'
@@ -48,6 +52,8 @@ router.post('/register', async (req, res) => {
       businessName,
       city,
       brands,
+      // The moment they agreed. Kept as a record of consent.
+      termsAcceptedAt: new Date(),
     })
     await user.save()
 

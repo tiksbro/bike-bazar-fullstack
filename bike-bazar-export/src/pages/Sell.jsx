@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { citiesByProvince } from '../data/cities'
 import { createVehicle, uploadPhotos } from '../services/vehicleService'
 import { useAuth } from '../context/AuthContext'
@@ -207,6 +208,9 @@ function Sell() {
   const [photos, setPhotos] = useState([])
   // 'Uploading photos...' or 'Publishing...' while the Publish button is busy.
   const [submitLabel, setSubmitLabel] = useState('')
+  // The "I own this vehicle" box on the Review step, and its error message.
+  const [acceptedRules, setAcceptedRules] = useState(false)
+  const [rulesError, setRulesError] = useState('')
 
   // Removes the error messages of the given boxes (if they have one).
   function clearErrors(...fields) {
@@ -303,6 +307,15 @@ function Sell() {
 
   async function handlePublish() {
     setSubmitError('')
+
+    // Stop here if the confirmation box is not ticked. We return BEFORE
+    // setSubmitting(true), so no photos are uploaded and no listing is made.
+    if (!acceptedRules) {
+      setRulesError('Please confirm this before publishing.')
+      return
+    }
+    setRulesError('')
+
     setSubmitting(true)
     try {
       const token = localStorage.getItem('bikebazar_token')
@@ -333,6 +346,9 @@ function Sell() {
     setErrors({})
     setStep(1)
     setPublished(false)
+    // A new listing needs its own confirmation, so start unticked.
+    setAcceptedRules(false)
+    setRulesError('')
   }
 
   // ---------- Screen 1: not logged in ----------
@@ -410,6 +426,42 @@ function Sell() {
             />
           )}
           {step === 5 && <ReviewStep formData={formData} photos={photos} onEdit={goToStep} />}
+
+          {/* The confirmation box, only on the Review step. The link opens
+              in a new tab so the finished form is not lost. Ticking it
+              clears the error straight away. */}
+          {isLastStep && (
+            <div className="border border-bordercol rounded-cardsm p-3.5 mt-6">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedRules}
+                  onChange={(e) => {
+                    setAcceptedRules(e.target.checked)
+                    if (e.target.checked) setRulesError('')
+                  }}
+                  className="mt-0.5 w-4 h-4 accent-accent shrink-0"
+                />
+                <span className="text-sm text-textmuted">
+                  I own this vehicle (or I am allowed to sell it), and this listing follows the{' '}
+                  <Link
+                    to="/listing-rules"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-accent hover:underline"
+                  >
+                    Listing Rules
+                  </Link>
+                  .
+                </span>
+              </label>
+              {rulesError && (
+                <p role="alert" className="text-xs text-danger mt-1.5">
+                  {rulesError}
+                </p>
+              )}
+            </div>
+          )}
 
           {submitError && (
             <div role="alert" className="mt-6 text-sm text-danger bg-dangerbg rounded-ctl px-4 py-3">

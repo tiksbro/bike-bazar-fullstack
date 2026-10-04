@@ -4,6 +4,7 @@ import VehicleCard, { VehicleArt } from '../components/VehicleCard'
 import VehiclePhoto from '../components/VehiclePhoto'
 import { getVehicleBySlug, getSimilar, getHealthScore } from '../services/vehicleService'
 import { getUserContact, getUserRatings } from '../services/userService'
+import { useAuth } from '../context/AuthContext'
 import HealthScoreGauge from '../components/HealthScoreGauge'
 import HealthScoreBreakdown from '../components/HealthScoreBreakdown'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
@@ -50,6 +51,9 @@ function headerSpecs(vehicle) {
 
 function VehicleDetail() {
   const { slug } = useParams()
+  // Logged-out visitors do not get the seller's email, so the contact
+  // buttons send them to the login page instead.
+  const { user } = useAuth()
   const [vehicle, setVehicle] = useState(null)
   const [similar, setSimilar] = useState([])
   const [sellerContact, setSellerContact] = useState(null)
@@ -122,12 +126,15 @@ function VehicleDetail() {
   const isCar = vehicle.vehicleType === 'car'
 
   // One mailto link shared by the desktop buttons and the phone action bar.
-  // It stays null until the seller's email has loaded.
-  const contactHref = sellerContact
+  // We check for the EMAIL, not just sellerContact: a logged-out visitor
+  // still gets { name } back, but with no email in it.
+  const contactHref = sellerContact?.email
     ? `mailto:${sellerContact.email}?subject=${encodeURIComponent(
         `Interested in your ${vehicle.brand} ${vehicle.model} listing on Bike Bazar`
       )}`
     : null
+
+  const isLoggedIn = Boolean(user)
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -185,7 +192,11 @@ function VehicleDetail() {
               two actions live in the sticky bar at the bottom instead. */}
           <div className="hidden md:flex gap-3 mt-6">
             <Button onClick={() => setOfferModalOpen(true)}>Make an Offer</Button>
-            {contactHref ? (
+            {!isLoggedIn ? (
+              <Button variant="secondary" to="/login">
+                Log in to contact seller
+              </Button>
+            ) : contactHref ? (
               <Button variant="secondary" href={contactHref}>
                 Contact Seller
               </Button>
@@ -274,6 +285,7 @@ function VehicleDetail() {
       <MobileActionBar
         vehicle={vehicle}
         contactHref={contactHref}
+        isLoggedIn={isLoggedIn}
         onMakeOffer={() => setOfferModalOpen(true)}
       />
 
@@ -522,7 +534,7 @@ function GalleryArrow({ direction, disabled, onClick }) {
 // "Sell" button, which pokes up out of the bottom menu.
 // (On phones the Compare bar hides itself on this page, so the two bars
 // never stack. See CompareBar.jsx.)
-function MobileActionBar({ vehicle, contactHref, onMakeOffer }) {
+function MobileActionBar({ vehicle, contactHref, isLoggedIn, onMakeOffer }) {
   return (
     <div
       data-sticky-action-bar
@@ -535,7 +547,20 @@ function MobileActionBar({ vehicle, contactHref, onMakeOffer }) {
           </p>
           <p className="text-xs text-textfaint">{vehicle.negotiable ? 'Negotiable' : 'Fixed price'}</p>
         </div>
-        {contactHref ? (
+        {/* "Log in" is kept short on purpose: the full sentence would not
+            fit next to the price and Make Offer on a 360px phone. The
+            aria-label gives screen readers the whole sentence. */}
+        {!isLoggedIn ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="py-2.5"
+            to="/login"
+            aria-label="Log in to contact seller"
+          >
+            Log in
+          </Button>
+        ) : contactHref ? (
           <Button variant="secondary" size="sm" className="py-2.5" href={contactHref}>
             Contact
           </Button>

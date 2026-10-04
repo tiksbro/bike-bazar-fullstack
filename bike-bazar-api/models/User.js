@@ -11,6 +11,9 @@ const userSchema = new mongoose.Schema({
   verified: { type: Boolean, default: false },
   subscriptionTier: { type: String, enum: ['free', 'pro'], default: 'free' },
   isAdmin: { type: Boolean, default: false },
+  // When this person ticked "I agree" on the register form.
+  // Not required: accounts made before this existed simply do not have it.
+  termsAcceptedAt: { type: Date },
 }, {
   toJSON: {
     virtuals: true,

@@ -1,4 +1,18 @@
+import { Link } from 'react-router-dom'
+import { SITE } from '../config/site'
+
+// The links in the bottom bar. Real pages, so they use <Link>.
+const legalLinks = [
+  { to: '/terms', label: 'Terms of Use' },
+  { to: '/privacy', label: 'Privacy Policy' },
+  { to: '/listing-rules', label: 'Listing Rules' },
+  { to: '/safety', label: 'Safety' },
+]
+
 function Footer() {
+  // Works out the year when the page loads, so it never goes out of date.
+  const year = new Date().getFullYear()
+
   return (
     <footer className="mt-14 border-t border-bordercol px-8 md:px-14 py-9">
       <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row gap-10">
@@ -7,7 +21,7 @@ function Footer() {
             <span className="w-7 h-7 rounded-[9px] bg-accent flex items-center justify-center text-white font-display font-bold text-sm">
               B
             </span>
-            <span className="font-display font-bold text-lg">Bike Bazar</span>
+            <span className="font-display font-bold text-lg">{SITE.name}</span>
           </div>
           <p className="text-[13.5px] text-textmuted">
             Buy • Sell • Compare • Verify. A vehicle marketplace built for Nepal.
@@ -20,6 +34,22 @@ function Footer() {
           <FooterColumn title="Services" links={['Inspection', 'Financing', 'Insurance']} />
           <FooterColumn title="Support" links={['Help Center', 'Safety', 'Report Listing']} />
         </div>
+      </div>
+
+      {/* The bottom bar. One line on wider screens; on a phone the
+          copyright sits above the links, each link on its own line. */}
+      <div className="max-w-[1440px] mx-auto mt-9 pt-6 border-t border-bordercol flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <p className="text-[13px] text-textfaint">© {year} {SITE.name}</p>
+
+        <ul className="flex flex-col sm:flex-row gap-2 sm:gap-5 text-[13px]">
+          {legalLinks.map((link) => (
+            <li key={link.to}>
+              <Link to={link.to} className="text-textmuted hover:text-ink">
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
     </footer>
   )

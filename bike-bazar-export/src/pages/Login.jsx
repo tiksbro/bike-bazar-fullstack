@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import Button from '../components/Button'
@@ -132,6 +132,8 @@ function Login() {
   const [isDealer, setIsDealer] = useState(false)
   const [businessName, setBusinessName] = useState('')
   const [city, setCity] = useState('')
+  // Only used when registering: the "I agree" box.
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -150,6 +152,14 @@ function Login() {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+
+    // Stop here if the agreement box is not ticked. We return BEFORE
+    // setSubmitting(true), so nothing is sent to the server.
+    if (isRegister && !acceptedTerms) {
+      setError('Please accept the Terms of Use and Privacy Policy to create an account.')
+      return
+    }
+
     setSubmitting(true)
 
     try {
@@ -157,12 +167,12 @@ function Login() {
         await login(email.trim(), password)
         navigate('/profile')
       } else {
-        await register(
-          name.trim(),
-          email.trim(),
-          password,
-          isDealer ? { role: 'dealer', businessName: businessName.trim(), city: city.trim() } : {}
-        )
+        await register(name.trim(), email.trim(), password, {
+          // The real value of the checkbox, so the server records a true
+          // answer. The guard above means it is always true by this point.
+          acceptTerms: acceptedTerms,
+          ...(isDealer ? { role: 'dealer', businessName: businessName.trim(), city: city.trim() } : {}),
+        })
         navigate(isDealer ? '/dashboard' : '/profile')
       }
     } catch (err) {
@@ -351,6 +361,42 @@ function Login() {
                     </div>
                   )}
                 </>
+              )}
+
+              {/* The agreement box. The links open in a new tab so a
+                  half-filled form is not lost. We check it in
+                  handleSubmit instead of using the HTML `required`
+                  attribute, so the message uses our own error style. */}
+              {isRegister && (
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 accent-accent shrink-0"
+                  />
+                  <span className="text-sm text-textmuted">
+                    I agree to the{' '}
+                    <Link
+                      to="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-accent hover:underline"
+                    >
+                      Terms of Use
+                    </Link>{' '}
+                    and{' '}
+                    <Link
+                      to="/privacy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-accent hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
               )}
 
               {error && (

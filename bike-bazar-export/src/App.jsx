@@ -24,6 +24,9 @@ import Profile from './pages/Profile'
 import NotFound from './pages/NotFound'
 import Admin from './pages/Admin'
 import MyOffers from './pages/MyOffers'
+import Terms from './pages/Terms'
+import Privacy from './pages/Privacy'
+import ListingRules from './pages/ListingRules'
 
 function App() {
   return (
@@ -53,8 +56,16 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/admin" element={<Admin />} />
-                  <Route path="*" element={<NotFound />} />
                   <Route path="/my-offers" element={<MyOffers />} />
+
+                  {/* Legal pages */}
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/listing-rules" element={<ListingRules />} />
+
+                  {/* Keep this last: it catches every address that did not
+                      match a route above. */}
+                  <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>
             </CompareProvider>

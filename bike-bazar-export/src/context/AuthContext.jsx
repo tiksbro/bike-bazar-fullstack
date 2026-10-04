@@ -32,11 +32,13 @@ export function AuthProvider({ children }) {
     setUser(data.user)
   }
 
- async function register(name, email, password, dealerInfo = {}) {
+ // `extras` carries anything else the register form collected, such as
+ // acceptTerms (the "I agree" box) and the dealer fields.
+ async function register(name, email, password, extras = {}) {
   const res = await fetch(`${API_URL}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, email, password, ...dealerInfo }),
+    body: JSON.stringify({ name, email, password, ...extras }),
   })
 
     const data = await res.json()

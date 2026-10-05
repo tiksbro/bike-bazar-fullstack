@@ -39,7 +39,7 @@ function App() {
               <Routes>
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<Home />} />
-                  <Route path="/vehicles" element={<Browse />} />
+                  <Route path="/vehicles" element={<Browse /> } />
                   <Route path="/vehicle/:slug" element={<VehicleDetail />} />
                   <Route path="/new-bikes" element={<NewBikes />} />
                   <Route path="/new-bikes/:slug" element={<NewBikeDetail />} />

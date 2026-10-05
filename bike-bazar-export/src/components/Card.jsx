@@ -3,6 +3,8 @@
 //   tone="attention" gives a soft amber tint, for things that need the
 //   person to act (like an offer waiting for a reply).
 //   hover adds the small lift on mouse-over (for clickable cards).
+//  className lets the caller add more classes, like "w-full" or "max-w-[400px]".
+
 const paddings = { none: '', sm: 'p-4', md: 'p-5', lg: 'p-6' }
 
 const tones = {

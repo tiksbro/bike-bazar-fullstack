@@ -83,7 +83,7 @@ function Navbar() {
   const boxClass = isHome
     ? `rounded-[18px] border px-4 lg:px-5 transition-colors duration-300 backdrop-blur-md ${
         glass
-          ? 'bg-white/10 border-white/20 shadow-[0_8px_30px_rgba(0,0,0,0.18)]'
+          ? 'bg-[rgba(8,22,56,0.38)] border-white/20 shadow-[0_8px_30px_rgba(0,0,0,0.18)]'
           : 'bg-white/95 border-bordercol shadow-card'
       }`
     : ''

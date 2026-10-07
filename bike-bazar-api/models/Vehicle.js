@@ -47,7 +47,9 @@ const vehicleSchema = new mongoose.Schema({
   location: { type: String, required: true },
   featured: { type: Boolean, default: false },
   featuredUntil: { type: Date },
-  verifiedSeller: { type: Boolean, default: true },
+  // false by default: no seller is verified until phone OTP exists.
+  // (It was true, which made every listing look verified.)
+  verifiedSeller: { type: Boolean, default: false },
   priceInsight: { type: String, enum: ['good', 'fair', 'high'], default: 'fair' },
   artColor: { type: String, default: 'blue' },
   // photos[0] is the cover photo. Old listings have an empty list and still show the SVG art.

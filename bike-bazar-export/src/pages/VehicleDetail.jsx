@@ -9,7 +9,7 @@ import HealthScoreGauge from '../components/HealthScoreGauge'
 import HealthScoreBreakdown from '../components/HealthScoreBreakdown'
 import { useDocumentTitle } from '../hooks/useDocumentTitle'
 import MakeOfferModal from '../components/MakeOfferModal'
-import Badge, { PriceBadge } from '../components/Badge'
+import { PriceBadge } from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import { Skeleton } from '../components/Skeleton'
@@ -177,14 +177,7 @@ function VehicleDetail() {
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mt-3">
-            {vehicle.verifiedSeller && (
-              <Badge variant="success">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-                Verified Seller
-              </Badge>
-            )}
+            {/* "Verified Seller" badge removed (7 Oct) until phone OTP exists. */}
             <PriceBadge insight={vehicle.priceInsight} />
           </div>
 
@@ -378,11 +371,7 @@ function SellerCard({ vehicle, sellerName, sellerRating }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <p className="font-semibold truncate">{sellerName || 'Seller'}</p>
-            {vehicle.verifiedSeller ? (
-              <Badge variant="success">Verified</Badge>
-            ) : (
-              <Badge variant="neutral">Not verified</Badge>
-            )}
+            {/* No Verified / Not verified badge until phone OTP exists (7 Oct). */}
           </div>
           <p className="text-sm text-textmuted mt-0.5">
             {vehicle.location}

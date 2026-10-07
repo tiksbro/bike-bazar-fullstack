@@ -110,14 +110,8 @@ function VehicleCard({ vehicle, variant = 'result' }) {
               Featured
             </Badge>
           )}
-          {vehicle.verifiedSeller && (
-            <Badge variant="success">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              Verified
-            </Badge>
-          )}
+          {/* The green "Verified" badge was removed (7 Oct): no seller is
+              really verified yet. Add it back after phone OTP is built. */}
         </div>
 
         <button

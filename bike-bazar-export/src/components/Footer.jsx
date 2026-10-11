@@ -24,7 +24,7 @@ function Footer() {
             <span className="font-display font-bold text-lg">{SITE.name}</span>
           </div>
           <p className="text-[13.5px] text-textmuted">
-            Buy • Sell • Compare • Verify. A vehicle marketplace built for Nepal.
+            Buy • Sell • Compare. A vehicle marketplace built for Nepal.
           </p>
         </div>
 

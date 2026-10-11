@@ -20,9 +20,16 @@ function CompareBar() {
       {/* An invisible box the same height as the bar. The bar is "fixed"
           (it floats over the page), so without this box it would cover the
           last part of the page, like the bottom of the footer. */}
-      <div aria-hidden="true" className={`h-[60px] ${hideOnPhone}`} />
+      {/* On phones it is taller (84px): the bar floats 20px higher, see below. */}
+      <div aria-hidden="true" className={`h-[60px] max-lg:h-[84px] ${hideOnPhone}`} />
 
-      <div className={`fixed bottom-16 lg:bottom-0 left-0 right-0 bg-ink text-white px-4 sm:px-6 py-3 z-50 ${hideOnPhone}`}>
+      {/* Phones: the round Sell button sticks up 28px above the bottom bar,
+          so this bar floats above it (bottom-[86px]) as a rounded card,
+          instead of covering the button. Desktop has no bottom bar, so
+          there it is a full-width strip at the very bottom (lg:...). */}
+      <div
+        className={`fixed bottom-[86px] left-3 right-3 rounded-card shadow-pop lg:bottom-0 lg:left-0 lg:right-0 lg:rounded-none lg:shadow-none bg-ink text-white px-4 sm:px-6 py-3 z-50 ${hideOnPhone}`}
+      >
         <div className="flex items-center justify-between">
           <span className="text-sm">
             {compareIds.length} vehicle{compareIds.length > 1 ? 's' : ''} selected
